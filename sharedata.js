@@ -141,6 +141,7 @@ let productsData = [
         stock: 20,
         status: "active"
     }
+    
 ];
 
 // Hàm đồng bộ dữ liệu từ admin

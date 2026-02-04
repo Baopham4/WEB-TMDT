@@ -1,0 +1,655 @@
+// Admin Management Script
+class AdminManager {
+    constructor() {
+        this.products = [];
+        this.orders = [];
+        this.orderStatusOptions = [
+            'Chờ xác nhận',
+            'Đã xác nhận',
+            'Đang giao',
+            'Đã giao',
+            'Đã hủy'
+        ];
+        this.init();
+    }
+
+    init() {
+        this.loadData();
+        this.setupEventListeners();
+        this.renderProducts();
+        this.renderOrders();
+        this.updateStats();
+    }
+
+    loadData() {
+        // Load products from localStorage or use default
+        const savedProducts = localStorage.getItem('adminProducts');
+        
+        if (savedProducts) {
+            this.products = JSON.parse(savedProducts);
+        } else {
+            // Load from main website
+            const mainProducts = localStorage.getItem('websiteProducts');
+            if (mainProducts) {
+                this.products = JSON.parse(mainProducts);
+            } else {
+                // Use default products
+                this.products = this.getDefaultProducts();
+            }
+        }
+        
+        // Load orders
+        const savedOrders = localStorage.getItem('adminOrders');
+        if (savedOrders) {
+            this.orders = JSON.parse(savedOrders);
+        }
+        
+        // Update UI
+        this.updateProductCount();
+        this.updateOrderCount();
+        this.updateLastSync();
+    }
+
+    getDefaultProducts() {
+        return [
+            {
+                id: 1,
+                name: "Vòng Phỉ Thúy Lý Ngư",
+                description: "Ngọc tự nhiên từ Myanmar, màu lục bảo thượng hạng",
+                price: 42000000,
+                salePrice: null,
+                category: "Vòng tay",
+                image: "images/vongtay1.jpg",
+                stock: 15,
+                status: "active",
+                details: "Ngọc phỉ thúy tự nhiên",
+                badge: "BÁN CHẠY"
+            },
+            {
+                id: 2,
+                name: "Ngọc Phỉ Thúy Tuyết",
+                description: "Đá trắng trong suốt từ vùng Kachin",
+                price: 85500000,
+                salePrice: null,
+                category: "Dây chuyền",
+                image: "images/daychuyen1.jpg",
+                stock: 8,
+                status: "active",
+                details: "Ngọc phỉ thúy tuyết trắng",
+                badge: "CAO CẤP"
+            },
+            {
+                id: 3,
+                name: "Nhẫn Phỉ Thúy Rồng",
+                description: "Kết hợp vàng 24K và ngọc phỉ thúy xanh lục",
+                price: 68750000,
+                salePrice: 58750000,
+                category: "Nhẫn",
+                image: "images/nhan1.jpg",
+                stock: 5,
+                status: "active",
+                details: "Ngọc phỉ thúy + Vàng 24K",
+                badge: "ĐỘC BẢN"
+            },
+            {
+                id: 4,
+                name: "Bông Tai Hoa Sen",
+                description: "Đôi bông tai hình hoa sen cách điệu",
+                price: 39500000,
+                salePrice: 34500000,
+                category: "Bông tai",
+                image: "images/bongtai1.jpg",
+                stock: 12,
+                status: "active",
+                details: "Ngọc phỉ thúy + Kim cương",
+                badge: "ƯU ĐÃI"
+            }
+        ];
+    }
+
+    setupEventListeners() {
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = item.dataset.tab;
+                this.switchTab(tab);
+            });
+        });
+
+        // Add product button
+        document.getElementById('addProductBtn').addEventListener('click', () => {
+            this.openProductModal();
+        });
+
+        // Sync button - ĐÃ SỬA: THÊM GỬI SỰ KIỆN
+        document.getElementById('syncBtn').addEventListener('click', () => {
+            this.syncWithWebsite();
+        });
+
+        // Back to site button
+        document.getElementById('backToSite').addEventListener('click', () => {
+            window.location.href = '../index.html';
+        });
+
+        // Product form
+        document.getElementById('productForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveProduct();
+        });
+
+        // Modal close buttons
+        document.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.closeModal();
+            });
+        });
+
+        // Image selection
+        document.querySelectorAll('.sample-image').forEach(img => {
+            img.addEventListener('click', () => {
+                document.getElementById('productImage').value = img.dataset.img;
+            });
+        });
+
+        // Search
+        document.getElementById('productSearch').addEventListener('input', (e) => {
+            this.filterProducts(e.target.value);
+        });
+
+        // Category filter
+        document.getElementById('categoryFilter').addEventListener('change', (e) => {
+            this.filterProducts();
+        });
+
+        // Status filter
+        document.getElementById('statusFilter').addEventListener('change', (e) => {
+            this.filterProducts();
+        });
+
+        // Material button selection
+        document.querySelectorAll('.material-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Bỏ active class khỏi tất cả button
+                document.querySelectorAll('.material-btn').forEach(b => b.classList.remove('active'));
+                // Thêm active class cho button được click
+                btn.classList.add('active');
+                // Cập nhật hidden input
+                document.getElementById('productDetails').value = btn.dataset.material;
+                console.log('Chọn chất liệu:', btn.dataset.material);
+            });
+        });
+
+        // Origin button selection
+        document.querySelectorAll('.origin-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Bỏ active class khỏi tất cả button
+                document.querySelectorAll('.origin-btn').forEach(b => b.classList.remove('active'));
+                // Thêm active class cho button được click
+                btn.classList.add('active');
+                // Cập nhật hidden input
+                document.getElementById('productOrigin').value = btn.dataset.origin;
+                console.log('Chọn xuất xứ:', btn.dataset.origin);
+            });
+        });
+
+        // QUAN TRỌNG: LẮNG NGHE THAY ĐỔI STOCK TỪ WEBSITE CHÍNH
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'adminProducts') {
+                console.log('🔔 Admin nhận được thay đổi stock từ website chính');
+                this.loadData();
+                this.renderProducts();
+                this.updateStats();
+                this.showNotification('Stock đã được cập nhật từ giỏ hàng!', 'info');
+            } else if (event.key === 'adminOrders') {
+                console.log('🧾 Admin nhận được đơn hàng mới từ website chính');
+                this.loadData();
+                this.renderOrders();
+                this.updateOrderCount();
+                this.updateLastSync();
+                this.showNotification('Có đơn hàng mới!', 'success');
+            }
+        });
+
+        // Kiểm tra cập nhật mỗi 2 giây
+        setInterval(() => {
+            const currentProducts = localStorage.getItem('adminProducts');
+            if (currentProducts && JSON.stringify(this.products) !== currentProducts) {
+                console.log('🔄 Phát hiện thay đổi stock, cập nhật admin...');
+                this.products = JSON.parse(currentProducts);
+                this.renderProducts();
+                this.updateStats();
+            }
+            const currentOrders = localStorage.getItem('adminOrders');
+            if (currentOrders && JSON.stringify(this.orders) !== currentOrders) {
+                console.log('🔄 Phát hiện đơn hàng mới, cập nhật admin...');
+                this.orders = JSON.parse(currentOrders);
+                this.renderOrders();
+                this.updateOrderCount();
+            }
+        }, 2000);
+    }
+
+    switchTab(tab) {
+        // Update active nav item
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+            if (item.dataset.tab === tab) {
+                item.classList.add('active');
+            }
+        });
+
+        // Show selected tab
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(`${tab}Tab`).classList.add('active');
+    }
+
+    renderProducts(filteredProducts = null) {
+        const productsToRender = filteredProducts || this.products;
+        const tableBody = document.getElementById('productsTable');
+        
+        let html = '';
+        
+        productsToRender.forEach(product => {
+            const price = this.formatPrice(product.price);
+            const salePrice = product.salePrice ? this.formatPrice(product.salePrice) : '-';
+            const discount = product.salePrice ? 
+                Math.round((1 - product.salePrice / product.price) * 100) : 0;
+            
+            html += `
+                <tr>
+                    <td>${product.id}</td>
+                    <td>
+                        <img src="${product.image}" alt="${product.name}" class="product-image"
+                             onerror="this.src='https://via.placeholder.com/60x60/00796B/FFFFFF?text=IMG'">
+                    </td>
+                    <td>
+                        <strong>${product.name}</strong>
+                        <br>
+                        <small>${product.description.substring(0, 50)}...</small>
+                        ${product.badge ? `<br><span class="badge">${product.badge}</span>` : ''}
+                    </td>
+                    <td>${product.category}</td>
+                    <td>${price}</td>
+                    <td>
+                        ${salePrice}
+                        ${discount > 0 ? `<br><small style="color: var(--danger);">-${discount}%</small>` : ''}
+                    </td>
+                    <td>
+                        ${product.stock}
+                        ${product.stock < 5 ? '<br><small style="color: var(--warning);">Sắp hết</small>' : ''}
+                    </td>
+                    <td>
+                        <span class="status-badge ${product.status === 'active' ? 'status-active' : 'status-inactive'}">
+                            ${product.status === 'active' ? 'Đang bán' : 'Ngừng bán'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn edit-btn" onclick="admin.editProduct(${product.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn delete-btn" onclick="admin.deleteProduct(${product.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button class="action-btn view-btn" onclick="admin.viewProduct(${product.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tableBody.innerHTML = html || '<tr><td colspan="9" style="text-align: center; padding: 40px;">Không có sản phẩm nào</td></tr>';
+    }
+
+    renderOrders() {
+        const tableBody = document.getElementById('ordersTable');
+        if (!tableBody) return;
+
+        const orders = this.orders || [];
+        let html = '';
+
+        orders.forEach(order => {
+            const total = this.formatPrice(order.total);
+            const dateStr = new Date(order.date).toLocaleString('vi-VN');
+            const customerName = order.customer?.name || 'Khách lẻ';
+            const payment = (order.paymentMethod || 'cod').toUpperCase();
+            const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+            const voucherCode = order.voucher?.code || '-';
+            const rawStatus = order.status || 'Chờ xác nhận';
+            let status = rawStatus;
+            if (rawStatus === 'processing' || rawStatus === 'pending') {
+                status = 'Chờ xác nhận';
+            }
+            if (!this.orderStatusOptions.includes(status)) {
+                status = 'Chờ xác nhận';
+            }
+            const optionsHtml = this.orderStatusOptions.map(s => 
+                `<option value="${s}" ${s === status ? 'selected' : ''}>${s}</option>`
+            ).join('');
+
+            html += `
+                <tr>
+                    <td>${order.id}</td>
+                    <td>${dateStr}</td>
+                    <td>${customerName}</td>
+                    <td>${payment}</td>
+                    <td>${itemCount}</td>
+                    <td>${total}</td>
+                    <td>${voucherCode}</td>
+                    <td>
+                        <select class="order-status-select" onchange="admin.updateOrderStatus('${order.id}', this.value)">
+                            ${optionsHtml}
+                        </select>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tableBody.innerHTML = html || '<tr><td colspan="8" style="text-align:center; padding: 40px;">Chưa có đơn hàng</td></tr>';
+    }
+
+    updateOrderStatus(orderId, newStatus) {
+        const index = this.orders.findIndex(order => order.id === orderId);
+        if (index === -1) return;
+        if (!this.orderStatusOptions.includes(newStatus)) return;
+        this.orders[index].status = newStatus;
+        localStorage.setItem('adminOrders', JSON.stringify(this.orders));
+        this.updateOrderCount();
+        this.showNotification('Đã cập nhật trạng thái đơn hàng', 'success');
+        this.renderOrders();
+    }
+
+    openProductModal(product = null) {
+        const modal = document.getElementById('productModal');
+        const form = document.getElementById('productForm');
+        
+        if (product) {
+            // Edit mode
+            document.getElementById('modalTitle').textContent = 'Sửa sản phẩm';
+            document.getElementById('productId').value = product.id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productCategory').value = product.category;
+            document.getElementById('productPrice').value = product.price;
+            document.getElementById('salePrice').value = product.salePrice || '';
+            document.getElementById('productStock').value = product.stock;
+            document.getElementById('productStatus').value = product.status;
+            document.getElementById('productImage').value = product.image;
+            document.getElementById('productDescription').value = product.description;
+            document.getElementById('productDetails').value = product.details || '';
+            
+            // Highlight đúng material button
+            document.querySelectorAll('.material-btn').forEach(btn => btn.classList.remove('active'));
+            if (product.details) {
+                const materialBtn = document.querySelector(`.material-btn[data-material="${product.details}"]`);
+                if (materialBtn) {
+                    materialBtn.classList.add('active');
+                }
+            }
+
+            // Highlight đúng origin button
+            document.querySelectorAll('.origin-btn').forEach(btn => btn.classList.remove('active'));
+            if (product.origin) {
+                const originBtn = document.querySelector(`.origin-btn[data-origin="${product.origin}"]`);
+                if (originBtn) {
+                    originBtn.classList.add('active');
+                    document.getElementById('productOrigin').value = product.origin;
+                }
+            }
+        } else {
+            // Add mode
+            document.getElementById('modalTitle').textContent = 'Thêm sản phẩm mới';
+            form.reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productStatus').value = 'active';
+            document.getElementById('productStock').value = 1;
+            
+            // Reset material button
+            document.querySelectorAll('.material-btn').forEach(btn => btn.classList.remove('active'));
+            // Reset origin button
+            document.querySelectorAll('.origin-btn').forEach(btn => btn.classList.remove('active'));
+        }
+        
+        modal.classList.add('active');
+    }
+
+    closeModal() {
+        document.getElementById('productModal').classList.remove('active');
+    }
+
+    saveProduct() {
+        const form = document.getElementById('productForm');
+        const productId = document.getElementById('productId').value;
+        
+        const productData = {
+            id: productId ? parseInt(productId) : this.generateId(),
+            name: document.getElementById('productName').value,
+            category: document.getElementById('productCategory').value,
+            price: parseInt(document.getElementById('productPrice').value),
+            salePrice: document.getElementById('salePrice').value ? 
+                parseInt(document.getElementById('salePrice').value) : null,
+            stock: parseInt(document.getElementById('productStock').value),
+            status: document.getElementById('productStatus').value,
+            image: document.getElementById('productImage').value || 'images/default-product.jpg',
+            description: document.getElementById('productDescription').value,
+            details: document.getElementById('productDetails').value,
+            origin: document.getElementById('productOrigin').value || 'Myanmar',
+            badge: document.getElementById('salePrice').value ? 'GIẢM GIÁ' : 'MỚI'
+        };
+        
+        if (productId) {
+            // Update existing product
+            const index = this.products.findIndex(p => p.id === parseInt(productId));
+            if (index !== -1) {
+                this.products[index] = productData;
+                this.showNotification('Cập nhật sản phẩm thành công!', 'success');
+            }
+        } else {
+            // Add new product
+            this.products.push(productData);
+            this.showNotification('Thêm sản phẩm mới thành công!', 'success');
+        }
+        
+        this.saveData();
+        this.renderProducts();
+        this.updateStats();
+        this.closeModal();
+    }
+
+    editProduct(id) {
+        const product = this.products.find(p => p.id === id);
+        if (product) {
+            this.openProductModal(product);
+        }
+    }
+
+    deleteProduct(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
+            this.products = this.products.filter(p => p.id !== id);
+            this.saveData();
+            this.renderProducts();
+            this.updateStats();
+            this.showNotification('Đã xóa sản phẩm', 'success');
+        }
+    }
+
+    viewProduct(id) {
+        const product = this.products.find(p => p.id === id);
+        if (product) {
+            alert(`Xem chi tiết: ${product.name}\n\n${product.description}`);
+        }
+    }
+
+    filterProducts(searchTerm = '') {
+        const category = document.getElementById('categoryFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        let filtered = this.products;
+        
+        // Filter by search term
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            filtered = filtered.filter(p => 
+                p.name.toLowerCase().includes(term) ||
+                p.description.toLowerCase().includes(term) ||
+                p.category.toLowerCase().includes(term)
+            );
+        }
+        
+        // Filter by category
+        if (category !== 'all') {
+            filtered = filtered.filter(p => p.category === category);
+        }
+        
+        // Filter by status
+        if (status !== 'all') {
+            filtered = filtered.filter(p => p.status === status);
+        }
+        
+        this.renderProducts(filtered);
+    }
+
+    // QUAN TRỌNG: ĐÃ THÊM GỬI SỰ KIỆN STORAGE
+    syncWithWebsite() {
+        // Save to localStorage for main website
+        localStorage.setItem('adminProducts', JSON.stringify(this.products));
+        localStorage.setItem('websiteProducts', JSON.stringify(this.products));
+        localStorage.setItem('adminLastSync', Date.now());
+        
+        // Trigger sync event for main website
+        localStorage.setItem('forceSync', Date.now());
+        
+        // QUAN TRỌNG: Gửi sự kiện storage để connect.js nhận được
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'adminProducts',
+            newValue: JSON.stringify(this.products),
+            oldValue: localStorage.getItem('adminProducts')
+        }));
+        
+        this.showNotification('Đã đồng bộ dữ liệu với website chính!', 'success');
+        this.updateLastSync();
+    }
+
+    updateStats() {
+        const total = this.products.length;
+        const active = this.products.filter(p => p.status === 'active').length;
+        const onSale = this.products.filter(p => p.salePrice).length;
+        const lowStock = this.products.filter(p => p.stock < 5).length;
+        
+        document.getElementById('totalProducts').textContent = total;
+        document.getElementById('activeProducts').textContent = active;
+        document.getElementById('saleProducts').textContent = onSale;
+        document.getElementById('lowStock').textContent = lowStock;
+    }
+
+    updateProductCount() {
+        document.getElementById('productCount').textContent = this.products.length;
+        document.getElementById('sysProductCount').textContent = this.products.length;
+    }
+
+    updateOrderCount() {
+        document.getElementById('orderCount').textContent = this.orders.length;
+        document.getElementById('sysOrderCount').textContent = this.orders.length;
+    }
+
+    updateLastSync() {
+        const lastSync = localStorage.getItem('adminLastSync');
+        if (lastSync) {
+            const time = new Date(parseInt(lastSync));
+            document.getElementById('lastSync').textContent = 
+                time.toLocaleTimeString('vi-VN');
+        }
+    }
+
+    saveData() {
+        localStorage.setItem('adminProducts', JSON.stringify(this.products));
+        localStorage.setItem('adminOrders', JSON.stringify(this.orders));
+        this.updateProductCount();
+
+        // QUAN TRỌNG: Gửi sự kiện storage để website chính nhận được
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'adminProducts',
+            newValue: JSON.stringify(this.products),
+            oldValue: localStorage.getItem('adminProducts')
+        }));
+    }
+
+    generateId() {
+        const ids = this.products.map(p => p.id);
+        return ids.length > 0 ? Math.max(...ids) + 1 : 1;
+    }
+
+    formatPrice(price) {
+        return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ' VNĐ';
+    }
+
+    showNotification(message, type = 'info') {
+        const notification = document.getElementById('notification');
+        notification.textContent = message;
+        notification.className = `notification ${type}`;
+        notification.style.display = 'flex';
+        
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
+    }
+
+    setupTabNavigation() {
+        // Tab switching
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabName = item.dataset.tab;
+                
+                // Remove active class from all items
+                navItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Hide all tabs
+                const tabs = document.querySelectorAll('.tab-content');
+                tabs.forEach(tab => tab.classList.remove('active'));
+                
+                // Show selected tab
+                const selectedTab = document.getElementById(tabName + 'Tab');
+                if (selectedTab) {
+                    selectedTab.classList.add('active');
+                }
+            });
+        });
+    }
+}
+
+// Enhanced setup for modals
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize admin
+    const admin = new AdminManager();
+    admin.setupTabNavigation();
+    
+    // Modal close handlers (general)
+    const closeButtons = document.querySelectorAll('.modal-close, .close');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) modal.style.display = 'none';
+        });
+    });
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(e) {
+        const modal = e.target;
+        if (modal.classList.contains('modal')) {
+            modal.style.display = 'none';
+        }
+    });
+});
+
+// Initialize admin manager
+const admin = new AdminManager();
+admin.setupTabNavigation();

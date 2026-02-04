@@ -261,10 +261,16 @@
     </footer>
 
     <!-- JavaScript -->
+    <script src="connect.js"></script>
     <script type="module" src="script.js"></script>
     <script>
         // Cập nhật số lượng giỏ hàng
         document.addEventListener('DOMContentLoaded', function() {
+            // Đồng bộ sản phẩm từ admin nếu có
+            if (typeof AdminConnector !== 'undefined') {
+                AdminConnector.syncProducts();
+            }
+            
             updateCartCount();
             
             function updateCartCount() {

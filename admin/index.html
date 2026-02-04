@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quản lý sản phẩm Phỉ Thúy Chi Bảo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin-style.css">
+</head>
+<body>
+    <!-- Admin Header -->
+    <header class="admin-header">
+        <div class="logo">
+            <i class="fas fa-crown"></i>
+            <h1>ADMIN PHỈ THÚY CHI BẢO</h1>
+            <span class="student-info">Sinh viên: Phạm Quốc Bảo - MSSV: 2274802010049</span>
+        </div>
+        <div class="admin-actions">
+            <button class="btn-secondary" id="syncBtn">
+                <i class="fas fa-sync"></i> Đồng bộ với website
+            </button>
+            <button class="btn-primary" id="backToSite">
+                <i class="fas fa-external-link-alt"></i> Về trang chính
+            </button>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-profile">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h3>Quản trị viên</h3>
+                <p>Phạm Quốc Bảo</p>
+            </div>
+
+            <nav class="admin-nav">
+                <a href="#" class="nav-item active" data-tab="products">
+                    <i class="fas fa-gem"></i>
+                    <span>Quản lý sản phẩm</span>
+                    <span class="badge" id="productCount">0</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="categories">
+                    <i class="fas fa-folder"></i>
+                    <span>Danh mục</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="vouchers">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Voucher & Mã code</span>
+                    <span class="badge" id="voucherCount">0</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="orders">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Đơn hàng</span>
+                    <span class="badge" id="orderCount">0</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Cài đặt</span>
+                </a>
+            </nav>
+
+            <div class="system-info">
+                <h4><i class="fas fa-info-circle"></i> Thông tin hệ thống</h4>
+                <div class="info-item">
+                    <span>Sản phẩm:</span>
+                    <span id="sysProductCount">0</span>
+                </div>
+                <div class="info-item">
+                    <span>Đơn hàng:</span>
+                    <span id="sysOrderCount">0</span>
+                </div>
+                <div class="info-item">
+                    <span>Lần cập nhật:</span>
+                    <span id="lastSync">Chưa có</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Products Management -->
+            <section class="tab-content active" id="productsTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-gem"></i> Quản lý sản phẩm</h2>
+                    <button class="btn-success" id="addProductBtn">
+                        <i class="fas fa-plus"></i> Thêm sản phẩm mới
+                    </button>
+                </div>
+
+                <!-- Product Filter -->
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <input type="text" id="productSearch" placeholder="Tìm kiếm sản phẩm...">
+                        <button><i class="fas fa-search"></i></button>
+                    </div>
+                    <select id="categoryFilter">
+                        <option value="all">Tất cả danh mục</option>
+                        <option value="Vòng tay">Vòng tay</option>
+                        <option value="Nhẫn">Nhẫn</option>
+                        <option value="Dây chuyền">Dây chuyền</option>
+                        <option value="Bông tai">Bông tai</option>
+                        <option value="Mặt ngọc">Mặt ngọc</option>
+                    </select>
+                    <select id="statusFilter">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="active">Đang bán</option>
+                        <option value="inactive">Ngừng bán</option>
+                    </select>
+                </div>
+
+                <!-- Products Table -->
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Hình ảnh</th>
+                                <th>Tên sản phẩm</th>
+                                <th>Danh mục</th>
+                                <th>Giá gốc</th>
+                                <th>Giá KM</th>
+                                <th>Số lượng</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTable">
+                            <!-- Products will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Product Stats -->
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalProducts">0</h3>
+                            <p>Tổng sản phẩm</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="activeProducts">0</h3>
+                            <p>Đang bán</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-tags"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="saleProducts">0</h3>
+                            <p>Đang giảm giá</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="lowStock">0</h3>
+                            <p>Sắp hết hàng</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Categories Management (Hidden by default) -->
+            <section class="tab-content" id="categoriesTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-folder"></i> Quản lý danh mục</h2>
+                    <button class="btn-success" id="addCategoryBtn">
+                        <i class="fas fa-plus"></i> Thêm danh mục
+                    </button>
+                </div>
+                <!-- Categories content -->
+            </section>
+
+            <!-- Voucher Management -->
+            <section class="tab-content" id="vouchersTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-ticket-alt"></i> Quản lý Voucher & Mã Code</h2>
+                    <div class="header-actions">
+                        <button class="btn-success" id="createVoucherBtn">
+                            <i class="fas fa-plus"></i> Tạo Mã Mới
+                        </button>
+                        <button class="btn-primary" id="distributeBatchBtn">
+                            <i class="fas fa-share-alt"></i> Phát Hành Batch
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Voucher Stats Dashboard -->
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h3>Tổng Voucher</h3>
+                        <div class="number" id="totalVouchersCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Đang Hoạt Động</h3>
+                        <div class="number" id="activeVouchersCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Tổng Lần Dùng</h3>
+                        <div class="number" id="totalUsagesCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Tổng Giảm Giá</h3>
+                        <div class="number" id="totalDiscountCount">0</div>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="voucher-filter-bar">
+                    <input type="text" id="voucherSearch" placeholder="Tìm kiếm mã code...">
+                    <select id="voucherStatusFilter">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="inactive">Không hoạt động</option>
+                        <option value="expired">Hết hạn</option>
+                    </select>
+                </div>
+
+                <!-- Voucher List -->
+                <div id="voucherList"></div>
+
+                <!-- Top Vouchers Analytics -->
+                <div>
+                    <h3 style="margin-top: 30px; margin-bottom: 20px;"><i class="fas fa-chart-bar"></i> Top Voucher Được Dùng Nhiều Nhất</h3>
+                    <div id="topVouchersChart"></div>
+                </div>
+            </section>
+
+            <!-- Orders Management (Hidden by default) -->
+            <section class="tab-content" id="ordersTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-shopping-cart"></i> Quản lý đơn hàng</h2>
+                </div>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Ngày</th>
+                                <th>Khách hàng</th>
+                                <th>Thanh toán</th>
+                                <th>Số sản phẩm</th>
+                                <th>Tổng tiền</th>
+                                <th>Voucher</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTable">
+                            <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Settings (Hidden by default) -->
+            <section class="tab-content" id="settingsTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-cog"></i> Cài đặt hệ thống</h2>
+                </div>
+                <!-- Settings content -->
+            </section>
+        </main>
+    </div>
+
+    <!-- Product Modal -->
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-gem"></i> <span id="modalTitle">Thêm sản phẩm mới</span></h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    <input type="hidden" id="productId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productName"><i class="fas fa-tag"></i> Tên sản phẩm</label>
+                            <input type="text" id="productName" required placeholder="Nhập tên sản phẩm">
+                        </div>
+                        <div class="form-group">
+                            <label for="productCategory"><i class="fas fa-folder"></i> Danh mục</label>
+                            <select id="productCategory" required>
+                                <option value="">Chọn danh mục</option>
+                                <option value="Vòng tay">Vòng tay</option>
+                                <option value="Nhẫn">Nhẫn</option>
+                                <option value="Dây chuyền">Dây chuyền</option>
+                                <option value="Bông tai">Bông tai</option>
+                                <option value="Mặt ngọc">Mặt ngọc</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productPrice"><i class="fas fa-money-bill-wave"></i> Giá gốc (VNĐ)</label>
+                            <input type="number" id="productPrice" required placeholder="1000000">
+                        </div>
+                        <div class="form-group">
+                            <label for="salePrice"><i class="fas fa-percentage"></i> Giá khuyến mãi (VNĐ)</label>
+                            <input type="number" id="salePrice" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productStock"><i class="fas fa-boxes"></i> Số lượng</label>
+                            <input type="number" id="productStock" required value="1" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="productStatus"><i class="fas fa-toggle-on"></i> Trạng thái</label>
+                            <select id="productStatus">
+                                <option value="active">Đang bán</option>
+                                <option value="inactive">Ngừng bán</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="productImage"><i class="fas fa-image"></i> Link hình ảnh</label>
+                        <input type="text" id="productImage" placeholder="https://example.com/image.jpg">
+                        <small>Hoặc chọn ảnh mẫu:</small>
+                        <div class="image-preview" id="imagePreview">
+                            <div class="sample-image" data-img="images/vongtay1.jpg">Vòng tay 1</div>
+                            <div class="sample-image" data-img="images/daychuyen1.jpg">Dây chuyền 1</div>
+                            <div class="sample-image" data-img="images/nhan1.jpg">Nhẫn 1</div>
+                            <div class="sample-image" data-img="images/bongtai1.jpg">Bông tai 1</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="productDescription"><i class="fas fa-file-alt"></i> Mô tả</label>
+                        <textarea id="productDescription" rows="4" placeholder="Mô tả chi tiết sản phẩm..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-info-circle"></i> Chất liệu</label>
+                        <div class="button-group" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" class="material-btn" data-material="Ngọc phỉ thúy tự nhiên">
+                                <i class="fas fa-gem"></i> Ngọc phỉ thúy tự nhiên
+                            </button>
+                            <button type="button" class="material-btn" data-material="Kết hợp vàng">
+                                <i class="fas fa-ring"></i> Kết hợp vàng
+                            </button>
+                            <button type="button" class="material-btn" data-material="Kết hợp kim cương">
+                                <i class="fas fa-sparkles"></i> Kết hợp kim cương
+                            </button>
+                        </div>
+                        <input type="hidden" id="productDetails">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-globe"></i> Xuất xứ</label>
+                        <div class="button-group" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" class="origin-btn" data-origin="Myanmar">
+                                <i class="fas fa-map-marker-alt"></i> Myanmar
+                            </button>
+                            <button type="button" class="origin-btn" data-origin="Kachin, Myanmar">
+                                <i class="fas fa-map-marker-alt"></i> Kachin, Myanmar
+                            </button>
+                        </div>
+                        <input type="hidden" id="productOrigin">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary modal-close">Hủy</button>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-save"></i> Lưu sản phẩm
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voucher Modal -->
+    <div class="modal" id="voucherModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="voucherFormTitle"><i class="fas fa-ticket-alt"></i> Tạo Mã Voucher Mới</h2>
+                <button class="close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="voucherForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Mã Code <span style="color: red;">*</span></label>
+                            <input type="text" id="voucherCode" placeholder="VIP2024" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Loại Giảm Giá <span style="color: red;">*</span></label>
+                            <select id="voucherType" required>
+                                <option value="percent">% Giảm</option>
+                                <option value="fixed">Giảm Số Tiền</option>
+                                <option value="freeship">Miễn Phí Ship</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Giá Trị <span style="color: red;">*</span></label>
+                            <input type="number" id="voucherValue" placeholder="10" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Giảm Giá Tối Đa (VNĐ)</label>
+                            <input type="number" id="maxDiscount" placeholder="500000" min="0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Đơn Hàng Tối Thiểu (VNĐ)</label>
+                            <input type="number" id="minOrder" placeholder="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Lần Dùng Tối Đa (trống = vô hạn)</label>
+                            <input type="number" id="maxUsage" placeholder="100" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Per Customer <span style="color: red;">*</span></label>
+                            <input type="number" id="maxPerCustomer" value="1" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ngày Bắt Đầu <span style="color: red;">*</span></label>
+                            <input type="date" id="voucherStartDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày Kết Thúc <span style="color: red;">*</span></label>
+                            <input type="date" id="voucherEndDate" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row form-row.full">
+                        <div class="form-group">
+                            <label>Mô Tả</label>
+                            <textarea id="voucherDescription" rows="3" placeholder="Mô tả voucher..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="adminVoucher.closeModal()">Hủy</button>
+                <button class="btn-primary" id="submitVoucherForm" onclick="adminVoucher.handleSubmitVoucher()">
+                    <i class="fas fa-save"></i> Lưu Voucher
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribution Modal -->
+    <div class="modal" id="distributionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-share-alt"></i> Phát Hành Batch Voucher</h2>
+                <button class="close" onclick="adminVoucher.closeDistributionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="distributionForm">
+                    <div class="form-group">
+                        <label>Chọn Voucher <span style="color: red;">*</span></label>
+                        <select id="selectVoucherForDistribution" required></select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Phương Thức Phát Hành</label>
+                            <select id="distributionType">
+                                <option value="manual">Manual</option>
+                                <option value="automatic">Automatic</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Số Lượng Per Khách</label>
+                            <input type="number" id="distributionQuantity" value="1" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Danh Sách Khách Hàng (ID) <span style="color: red;">*</span></label>
+                        <textarea id="customerListInput" rows="6" placeholder="cust001&#10;cust002&#10;cust003" required></textarea>
+                        <small>Nhập một ID mỗi dòng</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="adminVoucher.closeDistributionModal()">Hủy</button>
+                <button class="btn-success" onclick="adminVoucher.handleDistributionSubmit()">
+                    <i class="fas fa-check"></i> Phát Hành
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+
+    <!-- JavaScript -->
+    <script src="voucher-db.js"></script>
+    <script src="voucher-admin.js"></script>
+    <script src="admin-script.js"></script>

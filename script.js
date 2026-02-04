@@ -4,6 +4,9 @@
 
 import { studentInfo, productsData, newsData } from './sharedata.js';
 
+// ⭐ CẬP NHẬT: TẠO WINDOW.PRODUCTSDATA ĐỂ CÓ THỂ CẬP NHẬT TỪ ADMIN
+window.productsData = [...productsData];
+
 // Biến toàn cục
 let shoppingCart = JSON.parse(localStorage.getItem('shoppingCart')) || [];
 
@@ -58,8 +61,9 @@ const Core = {
     // Cập nhật số lượng giỏ hàng trên header
     updateCartCount() {
         const cartCounts = document.querySelectorAll('.cart-count');
+        const currentCart = JSON.parse(localStorage.getItem('shoppingCart')) || [];
         cartCounts.forEach(count => {
-            count.textContent = shoppingCart.length;
+            count.textContent = currentCart.length;
         });
     }
 };
@@ -170,6 +174,13 @@ const HomePage = {
         this.setupParticles();
         this.setupContactForm();
         this.setupScrollIndicator();
+        
+        // Lắng nghe sự kiện đồng bộ từ admin
+        window.addEventListener('productsSynced', (event) => {
+            console.log('🔄 Trang chủ nhận được tín hiệu đồng bộ, cập nhật sản phẩm');
+            this.loadProducts();
+            this.loadFeaturedProducts();
+        });
     },
 
     loadProducts() {
@@ -177,7 +188,7 @@ const HomePage = {
         if (!productsContainer) return;
         
         let productsHTML = '';
-        productsData.slice(0, 3).forEach(product => { // Chỉ hiển thị 3 sản phẩm đầu
+        window.productsData.slice(0, 3).forEach(product => {
             productsHTML += `
                 <div class="product-card" data-id="${product.id}">
                     ${product.badge ? `<span class="product-badge">${product.badge}</span>` : ''}
@@ -278,7 +289,7 @@ const HomePage = {
     },
 
     showProductModal(productId) {
-        const product = productsData.find(p => p.id === productId);
+        const product = window.productsData.find(p => p.id === productId);
         if (!product) return;
         
         const modal = document.createElement('div');
@@ -306,7 +317,7 @@ const HomePage = {
                         <div class="modal-price">${product.price}</div>
                         
                         <div class="modal-buttons">
-                            <button class="btn-primary" onclick="HomePage.addToCart(${product.id}); this.closest('.product-modal').classList.remove('active');">
+                            <button class="btn-primary" onclick="ProductsPage.addToCartFromButton(${product.id}); this.closest('.product-modal').classList.remove('active');">
                                 <i class="fas fa-shopping-cart"></i> THÊM VÀO GIỎ
                             </button>
                             <button class="btn-secondary" onclick="Core.showNotification('Yêu cầu tư vấn đã được gửi!', 'success'); this.closest('.product-modal').classList.remove('active');">
@@ -338,265 +349,32 @@ const HomePage = {
     },
 
     addToCart(productId) {
-        const product = productsData.find(p => p.id === productId);
+        const product = window.productsData.find(p => p.id === productId);
         if (product) {
             // Kiểm tra xem sản phẩm đã có trong giỏ chưa
             const existingItem = shoppingCart.find(item => item.id === productId);
             if (!existingItem) {
-                shoppingCart.push({...product, quantity: 1});
+                const adminProduct = window.productsData?.find(p => p.id == productId);
+                if (adminProduct && (parseInt(adminProduct.stock) || 0) <= 0) {
+                    Core.showNotification('Sản phẩm đã hết hàng', 'error');
+                    return;
+                }
+                const newItem = {...product, quantity: 1};
+                shoppingCart.push(newItem);
                 Core.saveCartToStorage();
                 Core.updateCartCount();
+                console.log('✅ Added to cart:', newItem);
+                console.log('📦 Cart now has', shoppingCart.length, 'items');
                 Core.showNotification(`Đã thêm "${product.name}" vào giỏ hàng`, 'success');
+                if (typeof AdminConnector !== 'undefined') {
+                    AdminConnector.updateStockAfterCartChange(productId, 1);
+                }
             } else {
                 Core.showNotification(`"${product.name}" đã có trong giỏ hàng`, 'info');
             }
+        } else {
+            console.log('❌ Product not found:', productId);
         }
-    }
-};
-
-// ============================ //
-// TRANG TIN TỨC MODULE (news.html)
-// ============================ //
-const NewsPage = {
-    init() {
-        if (!document.querySelector('.hero-news')) return;
-        
-        this.loadBreakingNews();
-        this.loadHeroNews();
-        this.loadLatestNews();
-        this.loadTrendingNews();
-        this.loadCategories();
-        this.loadTags();
-    },
-
-    loadBreakingNews() {
-        const breakingText = document.getElementById('breakingText');
-        if (!breakingText) return;
-        
-        let newsHTML = '<span class="marquee">';
-        newsData.breakingNews.forEach((news, index) => {
-            newsHTML += news + (index < newsData.breakingNews.length - 1 ? ' &nbsp;&nbsp;•&nbsp;&nbsp; ' : '');
-        });
-        newsHTML += '</span>';
-        
-        breakingText.innerHTML = newsHTML;
-    },
-
-    loadHeroNews() {
-        const heroNews = document.getElementById('heroNews');
-        if (!heroNews) return;
-        
-        const hero = newsData.hero;
-        heroNews.innerHTML = `
-            <div class="hero-news-content">
-                <span class="news-category category-phongthuy">
-                    <i class="fas fa-yin-yang"></i> PHONG THỦY
-                </span>
-                <h1 class="hero-news-title">${hero.title}</h1>
-                <p class="hero-news-excerpt">${hero.excerpt}</p>
-                <div class="news-meta">
-                    <span><i class="fas fa-user"></i> ${hero.author}</span>
-                    <span><i class="fas fa-calendar"></i> ${hero.date}</span>
-                    <span><i class="fas fa-clock"></i> Đọc ${hero.readTime}</span>
-                    <span><i class="fas fa-eye"></i> ${hero.views} lượt xem</span>
-                </div>
-                <button class="read-hero-btn" onclick="NewsPage.openArticle(${hero.id})">
-                    <i class="fas fa-book-open"></i> Đọc bài viết
-                </button>
-            </div>
-        `;
-    },
-
-    loadLatestNews() {
-        const latestNews = document.getElementById('latestNews');
-        if (!latestNews) return;
-        
-        let newsHTML = '';
-        newsData.latestNews.forEach(news => {
-            const categoryClass = `category-${news.category}`;
-            const categoryName = this.getCategoryName(news.category);
-            const categoryIcon = this.getCategoryIcon(news.category);
-            
-            newsHTML += `
-                <div class="news-card" onclick="NewsPage.openArticle(${news.id})">
-                    <img src="${news.image}" alt="${news.title}" class="news-image"
-                         onerror="this.src='https://via.placeholder.com/400x300/00796B/FFFFFF?text=Tin+tức'">
-                    <div class="news-content">
-                        <span class="news-category-badge ${categoryClass}">
-                            <i class="${categoryIcon}"></i> ${categoryName}
-                        </span>
-                        <h3 class="news-title">${news.title}</h3>
-                        <p class="news-excerpt">${news.excerpt}</p>
-                        <div class="news-footer">
-                            <span class="news-date"><i class="far fa-calendar"></i> ${news.date}</span>
-                            <span class="news-views"><i class="fas fa-eye"></i> ${news.views} lượt xem</span>
-                            <span class="read-more">
-                                Đọc tiếp <i class="fas fa-arrow-right"></i>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        latestNews.innerHTML = newsHTML;
-    },
-
-    loadTrendingNews() {
-        const trendingNews = document.getElementById('trendingNews');
-        if (!trendingNews) return;
-        
-        let trendingHTML = '';
-        newsData.trendingNews.forEach((news, index) => {
-            trendingHTML += `
-                <div class="trending-item" onclick="NewsPage.openArticle(${news.id})">
-                    <div class="trending-number">${index + 1}</div>
-                    <div class="trending-content">
-                        <div class="trending-title">${news.title}</div>
-                        <div class="trending-meta">
-                            <span><i class="fas fa-eye"></i> ${news.views} lượt xem</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        trendingNews.innerHTML = trendingHTML;
-    },
-
-    loadCategories() {
-        const categoryList = document.getElementById('categoryList');
-        if (!categoryList) return;
-        
-        let categoryHTML = '';
-        newsData.categories.forEach(category => {
-            categoryHTML += `
-                <a href="#" class="category-item" onclick="event.preventDefault(); NewsPage.filterByCategory('${category.name}');">
-                    <span class="category-name">
-                        <i class="${category.icon}"></i> ${category.name}
-                    </span>
-                    <span class="category-count">${category.count}</span>
-                </a>
-            `;
-        });
-        
-        categoryList.innerHTML = categoryHTML;
-    },
-
-    loadTags() {
-        const tagsCloud = document.getElementById('tagsCloud');
-        if (!tagsCloud) return;
-        
-        let tagsHTML = '';
-        newsData.tags.forEach(tag => {
-            tagsHTML += `
-                <a href="#" class="tag" onclick="event.preventDefault(); NewsPage.filterByTag('${tag}');">${tag}</a>
-            `;
-        });
-        
-        tagsCloud.innerHTML = tagsHTML;
-    },
-
-    getCategoryName(category) {
-        const names = {
-            'phongthuy': 'PHONG THỦY',
-            'ngocquy': 'NGỌC QUÝ',
-            'vanhoa': 'VĂN HÓA',
-            'thitruong': 'THỊ TRƯỜNG'
-        };
-        return names[category] || 'TIN TỨC';
-    },
-
-    getCategoryIcon(category) {
-        const icons = {
-            'phongthuy': 'fas fa-yin-yang',
-            'ngocquy': 'fas fa-gem',
-            'vanhoa': 'fas fa-landmark',
-            'thitruong': 'fas fa-chart-line'
-        };
-        return icons[category] || 'fas fa-newspaper';
-    },
-
-    openArticle(articleId) {
-        // Tìm bài viết
-        let article = newsData.hero.id === articleId ? newsData.hero : 
-                     newsData.latestNews.find(n => n.id === articleId) ||
-                     newsData.trendingNews.find(n => n.id === articleId);
-        
-        if (!article) {
-            Core.showNotification('Không tìm thấy bài viết', 'error');
-            return;
-        }
-        
-        const categoryClass = `category-${article.category}`;
-        const categoryName = this.getCategoryName(article.category);
-        const categoryIcon = this.getCategoryIcon(article.category);
-        
-        const modal = document.createElement('div');
-        modal.className = 'product-modal active';
-        modal.innerHTML = `
-            <div class="modal-overlay"></div>
-            <div class="modal-content">
-                <button class="modal-close"><i class="fas fa-times"></i></button>
-                <div class="modal-article">
-                    <span class="news-category-badge ${categoryClass}">
-                        <i class="${categoryIcon}"></i> ${categoryName}
-                    </span>
-                    <h1>${article.title}</h1>
-                    
-                    <div class="article-meta">
-                        <span><i class="fas fa-user"></i> ${article.author || 'Ngọc Báo'}</span>
-                        <span><i class="fas fa-calendar"></i> ${article.date}</span>
-                        <span><i class="fas fa-clock"></i> Đọc ${article.readTime || '5 phút'}</span>
-                        <span><i class="fas fa-eye"></i> ${article.views} lượt xem</span>
-                    </div>
-                    
-                    <img src="${article.image}" alt="${article.title}" 
-                         onerror="this.src='https://via.placeholder.com/800x400/00796B/FFFFFF?text=Bài+viết'">
-                    
-                    <div class="article-content">
-                        <p>${article.excerpt}</p>
-                        
-                        <h2>Nội dung chi tiết</h2>
-                        <p>Đây là nội dung chi tiết của bài viết về ${article.title.toLowerCase()}. Trong thực tế, đây sẽ là nội dung đầy đủ của bài báo với nhiều đoạn văn, hình ảnh và thông tin chi tiết.</p>
-                        
-                        <h3>Thông tin quan trọng</h3>
-                        <ul>
-                            <li>Thông tin chính xác và cập nhật nhất</li>
-                            <li>Phân tích từ các chuyên gia hàng đầu</li>
-                            <li>Dữ liệu thống kê đáng tin cậy</li>
-                            <li>Góc nhìn đa chiều về vấn đề</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Setup close events
-        const closeBtn = modal.querySelector('.modal-close');
-        const overlay = modal.querySelector('.modal-overlay');
-        
-        const closeModal = () => modal.classList.remove('active');
-        
-        closeBtn.addEventListener('click', closeModal);
-        overlay.addEventListener('click', closeModal);
-        
-        // Close on ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal.classList.contains('active')) {
-                closeModal();
-            }
-        });
-    },
-
-    filterByCategory(category) {
-        Core.showNotification(`Đang lọc tin tức theo danh mục: ${category}`, 'info');
-    },
-
-    filterByTag(tag) {
-        Core.showNotification(`Đang tìm kiếm tin tức với tag: ${tag}`, 'info');
     }
 };
 
@@ -613,6 +391,14 @@ const ProductsPage = {
         this.setupViewToggle();
         this.setupSearch();
         this.loadFeaturedProducts();
+        
+        // Lắng nghe sự kiện đồng bộ từ admin
+        window.addEventListener('productsSynced', (event) => {
+            console.log('🔄 Trang sản phẩm nhận được tín hiệu đồng bộ, cập nhật sản phẩm');
+            this.loadProducts();
+            this.loadFeaturedProducts();
+            this.updateFilterCounts();
+        });
     },
 
     loadProducts() {
@@ -624,7 +410,7 @@ const ProductsPage = {
         let gridHTML = '';
         let listHTML = '';
         
-        productsData.forEach(product => {
+        window.productsData.forEach(product => {
             // Grid view
             gridHTML += `
                 <div class="product-card" data-id="${product.id}" 
@@ -641,9 +427,14 @@ const ProductsPage = {
                         <h3 class="product-name">${product.name}</h3>
                         <p class="product-desc">${product.description}</p>
                         <p class="product-price">${product.price}</p>
-                        <button class="product-link" onclick="ProductsPage.showProductModal(${product.id})">
-                            <i class="fas fa-gem"></i> XEM CHI TIẾT
-                        </button>
+                        <div class="product-actions">
+                            <button class="product-link" onclick="ProductsPage.showProductModal(${product.id})">
+                                <i class="fas fa-gem"></i> XEM CHI TIẾT
+                            </button>
+                            <button class="product-cart-btn" onclick="ProductsPage.addToCartFromButton(${product.id})">
+                                <i class="fas fa-cart-plus"></i> THÊM GIỎ HÀNG
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -670,7 +461,7 @@ const ProductsPage = {
                             <button class="btn-primary" onclick="ProductsPage.showProductModal(${product.id})">
                                 <i class="fas fa-eye"></i> Xem chi tiết
                             </button>
-                            <button class="btn-secondary" onclick="ProductsPage.addToCart(${product.id})">
+                            <button class="btn-secondary" onclick="ProductsPage.addToCartFromButton(${product.id})">
                                 <i class="fas fa-cart-plus"></i> Thêm giỏ hàng
                             </button>
                         </div>
@@ -684,13 +475,67 @@ const ProductsPage = {
         this.updateProductsCount();
     },
 
+    // HÀM MỚI: Thêm sản phẩm vào giỏ hàng từ nút bấm
+    addToCartFromButton(productId) {
+        console.log('🛒 Adding product to cart:', productId);
+        
+        const product = window.productsData.find(p => p.id == productId);
+        if (!product) {
+            console.error('❌ Product not found:', productId);
+            alert('Không tìm thấy sản phẩm!');
+            return;
+        }
+        
+        // Lấy giỏ hàng hiện tại
+        let shoppingCart = JSON.parse(localStorage.getItem('shoppingCart')) || [];
+        
+        // Kiểm tra xem sản phẩm đã có trong giỏ chưa
+        const existingIndex = shoppingCart.findIndex(item => item.id == productId);
+        
+        if (existingIndex >= 0) {
+            // Tăng số lượng nếu đã có
+            const adminProduct = window.productsData?.find(p => p.id == productId);
+            const available = adminProduct ? (parseInt(adminProduct.stock) || 0) : 0;
+            if (available <= 0) {
+                alert('Sản phẩm đã hết hàng!');
+                return;
+            }
+            shoppingCart[existingIndex].quantity = (shoppingCart[existingIndex].quantity || 1) + 1;
+            if (typeof AdminConnector !== 'undefined') {
+                AdminConnector.updateStockAfterCartChange(productId, 1);
+            }
+        } else {
+            // Thêm mới
+            const productToAdd = {
+                ...product,
+                quantity: 1
+            };
+            shoppingCart.push(productToAdd);
+            if (typeof AdminConnector !== 'undefined') {
+                AdminConnector.updateStockAfterCartChange(productId, 1);
+            }
+        }
+        
+        // Lưu vào localStorage
+        localStorage.setItem('shoppingCart', JSON.stringify(shoppingCart));
+        
+        // Cập nhật UI
+        if (typeof Core !== 'undefined' && Core.updateCartCount) {
+            Core.updateCartCount();
+        }
+        
+        // Hiển thị thông báo
+        alert(`✅ Đã thêm "${product.name}" vào giỏ hàng!`);
+        console.log('📦 Cart updated:', shoppingCart);
+    },
+
     loadFeaturedProducts() {
         const featuredList = document.getElementById('featuredProducts');
         if (!featuredList) return;
         
         let html = '';
         // Lấy 3 sản phẩm đầu tiên làm featured
-        productsData.slice(0, 3).forEach(product => {
+        window.productsData.slice(0, 3).forEach(product => {
             html += `
                 <div class="featured-product" onclick="ProductsPage.showProductModal(${product.id})">
                     <img src="${product.image}" alt="${product.name}"
@@ -712,6 +557,9 @@ const ProductsPage = {
         
         if (!applyBtn) return;
         
+        // Cập nhật số lượng filter counts
+        this.updateFilterCounts();
+        
         // Apply filters
         applyBtn.addEventListener('click', () => {
             this.filterProducts();
@@ -732,6 +580,22 @@ const ProductsPage = {
                 Core.showNotification('Đã đặt lại bộ lọc', 'success');
             });
         }
+    },
+
+    updateFilterCounts() {
+        // Cập nhật số lượng cho từng danh mục
+        const categories = ['Vòng tay', 'Nhẫn', 'Dây chuyền', 'Bông tai', 'Mặt ngọc'];
+        
+        categories.forEach(category => {
+            const count = window.productsData.filter(p => p.category === category).length;
+            const checkbox = document.querySelector(`input[name="category"][value="${category}"]`);
+            if (checkbox) {
+                const filterCount = checkbox.closest('.filter-option').querySelector('.filter-count');
+                if (filterCount) {
+                    filterCount.textContent = count;
+                }
+            }
+        });
     },
 
     setupSorting() {
@@ -1107,9 +971,26 @@ const CartPage = {
 
     updateQuantity(index, change) {
         if (shoppingCart[index]) {
-            const newQuantity = (shoppingCart[index].quantity || 1) + change;
+            const item = shoppingCart[index];
+            const oldQuantity = item.quantity || 1;
+            const newQuantity = oldQuantity + change;
+            if (change > 0) {
+                const adminProduct = window.productsData?.find(p => p.id == item.id);
+                const available = adminProduct ? (parseInt(adminProduct.stock) || 0) : 0;
+                if (change > available) {
+                    Core.showNotification(`Chỉ còn ${available} sản phẩm trong kho`, 'error');
+                    return;
+                }
+            }
             if (newQuantity > 0) {
                 shoppingCart[index].quantity = newQuantity;
+                if (typeof AdminConnector !== 'undefined') {
+                    if (change > 0) {
+                        AdminConnector.updateStockAfterCartChange(item.id, change);
+                    } else if (change < 0) {
+                        AdminConnector.restoreStockFromCart(item.id, Math.abs(change));
+                    }
+                }
                 Core.saveCartToStorage();
                 this.loadCartItems();
                 this.updateCartSummary();
@@ -1122,6 +1003,11 @@ const CartPage = {
 
     removeItem(index) {
         if (confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
+            const item = shoppingCart[index];
+            const qty = item?.quantity || 1;
+            if (typeof AdminConnector !== 'undefined') {
+                AdminConnector.restoreStockFromCart(item.id, qty);
+            }
             shoppingCart.splice(index, 1);
             Core.saveCartToStorage();
             Core.updateCartCount();
@@ -1371,20 +1257,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cập nhật số lượng giỏ hàng
     Core.updateCartCount();
     
+    // Kiểm tra và đồng bộ dữ liệu sản phẩm
+    if (!window.productsData || window.productsData.length === 0) {
+        const savedProducts = localStorage.getItem('adminProducts');
+        if (savedProducts) {
+            window.productsData = JSON.parse(savedProducts);
+            console.log('📦 Loaded products from localStorage:', window.productsData.length);
+        } else {
+            console.log('📦 Using default products from sharedata.js');
+        }
+    }
+    
+    console.log('📊 All products:', window.productsData);
+    
     // Khởi tạo module cho trang cụ thể
     const isHomePage = document.querySelector('.hero-section');
-    const isNewsPage = document.querySelector('.hero-news');
     const isProductsPage = document.querySelector('.products-container');
-    const isCartPage = document.querySelector('.cart-container');
+    const isCartPage = document.querySelector('.checkout-wrapper');
     
     if (isHomePage) {
         HomePage.init();
         console.log('Đã khởi tạo trang chủ');
-    }
-    
-    if (isNewsPage) {
-        NewsPage.init();
-        console.log('Đã khởi tạo trang tin tức');
     }
     
     if (isProductsPage) {
@@ -1393,8 +1286,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if (isCartPage) {
-        CartPage.init();
-        console.log('Đã khởi tạo trang giỏ hàng');
+        console.log('Đã nhận diện trang checkout');
+        // CartPage sẽ được xử lý riêng trong checkout
     }
 });
 
@@ -1403,15 +1296,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================ //
 window.Core = Core;
 window.HomePage = HomePage;
-window.NewsPage = NewsPage;
 window.ProductsPage = ProductsPage;
 window.CartPage = CartPage;
-// ============================ //
-// KẾT NỐI VỚI ADMIN
-// ============================ //
 
-// Import module kết nối
-import './connect.js';
+// ============================ //
+// QUAN TRỌNG: LẮNG NGHE SỰ KIỆN ĐỒNG BỘ TỪ ADMIN
+// ============================ //
 
 // Lắng nghe sự kiện đồng bộ từ admin
 window.addEventListener('productsSynced', function(e) {
@@ -1432,7 +1322,7 @@ window.addEventListener('productsSynced', function(e) {
     }
 });
 
-// Tạo nút admin trên header (chỉ hiển thị cho admin)
+// Thêm nút admin trên header (chỉ hiển thị cho admin)
 function addAdminButton() {
     const header = document.querySelector('header');
     if (!header) return;
@@ -1468,3 +1358,5 @@ function addAdminButton() {
 
 // Thêm nút admin khi load
 document.addEventListener('DOMContentLoaded', addAdminButton);
+
+console.log('✅ Tất cả modules đã được tải');
