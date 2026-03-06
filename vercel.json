@@ -1,0 +1,15 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/products", "destination": "/products.html" },
+    { "source": "/news", "destination": "/news.html" },
+    { "source": "/orders", "destination": "/orders.html" },
+    { "source": "/cart", "destination": "/gio-hang.html" },
+    { "source": "/account", "destination": "/account.html" },
+    { "source": "/membership", "destination": "/membership.html" },
+    { "source": "/referral", "destination": "/referral.html" },
+    { "source": "/deals", "destination": "/deals.html" },
+    { "source": "/auth", "destination": "/auth.html" },
+    { "source": "/admin", "destination": "/admin/index.html" }
+  ]
+}
