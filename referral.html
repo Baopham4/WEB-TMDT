@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Giới thiệu bạn bè</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="style.css"><style>body{background:linear-gradient(180deg,#003d34,#00574b);color:#e5e7eb}.wrap{max-width:900px;margin:30px auto;padding:0 16px}.card{background:rgba(0,169,143,.12);border:1px solid rgba(0,169,143,.45);border-radius:12px;padding:16px}.title{font-size:22px;margin:0 0 12px}.list{display:grid;gap:8px}</style></head>
 <body>
-<header class="header-main"><div class="logo"><i class="fas fa-users"></i> GIỚI THIỆU</div><nav class="nav-menu"><a href="/" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a><a href="/account" class="nav-link"><i class="fas fa-user"></i> Tài khoản</a><a href="/orders" class="nav-link"><i class="fas fa-receipt"></i> Lịch sử</a></nav></header>
+<header class="header-main"><div class="logo"><i class="fas fa-users"></i> GIỚI THIỆU</div><nav class="nav-menu"><a href="index.html" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a><a href="account.html" class="nav-link"><i class="fas fa-user"></i> Tài khoản</a><a href="orders.html" class="nav-link"><i class="fas fa-receipt"></i> Lịch sử</a></nav></header>
 <div class="wrap">
     <div class="card">
         <h1 class="title"><i class="fas fa-link"></i> Mã giới thiệu</h1>
@@ -15,7 +15,7 @@
 </div>
 <script src="auth.js"></script><script src="customer-db.js"></script>
 <script>
-const u=JSON.parse(localStorage.getItem('currentUser')||'null');if(!u){location.href='/auth';}
-const link=location.origin+'/auth?ref='+encodeURIComponent(u.id);document.getElementById('code').textContent=link;document.getElementById('copyBtn').addEventListener('click',()=>{navigator.clipboard.writeText(link);alert('Đã sao chép')});const list=CustomerDB.getReferrals(u.id);const el=document.getElementById('list');el.innerHTML=list.length?list.map(x=>`<div>${x.newCustomerId} • ${new Date(x.at).toLocaleString('vi-VN')}</div>`).join(''):'Chưa có giới thiệu';
+const u=JSON.parse(localStorage.getItem('currentUser')||'null');if(!u){location.href='auth.html';}
+const link=location.origin+location.pathname.replace('referral.html','auth.html')+'?ref='+encodeURIComponent(u.id);document.getElementById('code').textContent=link;document.getElementById('copyBtn').addEventListener('click',()=>{navigator.clipboard.writeText(link);alert('Đã sao chép')});const list=CustomerDB.getReferrals(u.id);const el=document.getElementById('list');el.innerHTML=list.length?list.map(x=>`<div>${x.newCustomerId} • ${new Date(x.at).toLocaleString('vi-VN')}</div>`).join(''):'Chưa có giới thiệu';
 </script>
 </body></html>

@@ -731,7 +731,7 @@
     <script>
         document.addEventListener('DOMContentLoaded',function(){
             var btn=document.getElementById('logoutAdmin');
-            if(btn){btn.addEventListener('click',function(){if(window.Auth&&Auth.logout){Auth.logout();window.location.href='/auth?mode=admin'}})}
+            if(btn){btn.addEventListener('click',function(){if(window.Auth&&Auth.logout){Auth.logout();window.location.href='../auth.html?mode=admin'}})}
             var params=new URLSearchParams(location.search);
             var oid=params.get('orderId');
             if(oid){
