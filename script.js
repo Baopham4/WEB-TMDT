@@ -382,6 +382,9 @@ const HomePage = {
 // TRANG SẢN PHẨM MODULE
 // ============================ //
 const ProductsPage = {
+    pageSize: 9,
+    currentPage: 1,
+
     init() {
         if (!document.querySelector('.products-grid')) return;
         
@@ -472,7 +475,14 @@ const ProductsPage = {
         
         productsGrid.innerHTML = gridHTML;
         productsList.innerHTML = listHTML;
-        this.updateProductsCount();
+
+        // Mặc định: tất cả sản phẩm đều đang được hiển thị (trước khi lọc)
+        document.querySelectorAll('.product-card, .product-list-item').forEach(el=>{
+            el.dataset.filterVisible = '1';
+        });
+
+        this.currentPage = 1;
+        this.applyPagination();
     },
 
     // HÀM MỚI: Thêm sản phẩm vào giỏ hàng từ nút bấm
@@ -650,15 +660,18 @@ const ProductsPage = {
             products.forEach(product => {
                 const name = product.querySelector('.product-name, h3')?.textContent.toLowerCase();
                 const desc = product.querySelector('.product-desc, .description')?.textContent.toLowerCase();
+                const match = (name && name.includes(searchTerm)) || (desc && desc.includes(searchTerm));
                 
-                if (name?.includes(searchTerm) || desc?.includes(searchTerm)) {
-                    product.style.display = 'block';
+                if (match) {
+                    product.dataset.filterVisible = '1';
                     foundCount++;
                 } else {
-                    product.style.display = 'none';
+                    product.dataset.filterVisible = '0';
                 }
             });
             
+            this.currentPage = 1;
+            this.applyPagination();
             Core.showNotification(`Tìm thấy ${foundCount} sản phẩm`, foundCount > 0 ? 'success' : 'info');
         };
         
@@ -699,14 +712,15 @@ const ProductsPage = {
             const priceMatch = price >= minPrice && price <= maxPrice;
             
             if (categoryMatch && materialMatch && originMatch && priceMatch) {
-                product.style.display = 'block';
+                product.dataset.filterVisible = '1';
                 visibleCount++;
             } else {
-                product.style.display = 'none';
+                product.dataset.filterVisible = '0';
             }
         });
         
-        this.updateProductsCount(visibleCount);
+        this.currentPage = 1;
+        this.applyPagination();
         Core.showNotification(`Hiển thị ${visibleCount} sản phẩm`, 'info');
     },
 
@@ -737,6 +751,7 @@ const ProductsPage = {
         
         // Reorder products
         products.forEach(product => container.appendChild(product));
+        this.applyPagination();
     },
 
     showProductModal(productId) {
@@ -762,6 +777,63 @@ const ProductsPage = {
             const totalCount = count || document.querySelectorAll('.product-card[style*="block"], .product-card:not([style])').length;
             countElement.textContent = totalCount;
         }
+    },
+
+    applyPagination() {
+        const cards = Array.from(document.querySelectorAll('.product-card'));
+        const lists = Array.from(document.querySelectorAll('.product-list-item'));
+        if (!cards.length && !lists.length) return;
+
+        const filteredIndices = [];
+        cards.forEach((el, idx)=>{
+            if (el.dataset.filterVisible !== '0') filteredIndices.push(idx);
+        });
+
+        const totalVisible = filteredIndices.length;
+        const totalPages = Math.max(1, Math.ceil(totalVisible / this.pageSize));
+        if (this.currentPage > totalPages) this.currentPage = totalPages;
+
+        const start = (this.currentPage - 1) * this.pageSize;
+        const end = start + this.pageSize;
+
+        const indexToPos = {};
+        filteredIndices.forEach((idx,pos)=>{indexToPos[idx]=pos;});
+
+        cards.forEach((el, idx)=>{
+            const pos = indexToPos[idx];
+            const show = typeof pos !== 'undefined' && pos >= start && pos < end;
+            el.style.display = show ? '' : 'none';
+        });
+        lists.forEach((el, idx)=>{
+            const pos = indexToPos[idx];
+            const show = typeof pos !== 'undefined' && pos >= start && pos < end;
+            el.style.display = show ? '' : 'none';
+        });
+
+        this.updateProductsCount(totalVisible);
+        this.renderPagination(totalPages);
+    },
+
+    renderPagination(totalPages){
+        const pag = document.querySelector('.pagination');
+        if (!pag) return;
+        let html = '';
+        html += `<a href="#" class="page-link prev" data-page="prev"><i class="fas fa-chevron-left"></i></a>`;
+        for (let i=1;i<=totalPages;i++){
+            html += `<a href="#" class="page-link ${i===this.currentPage?'active':''}" data-page="${i}">${i}</a>`;
+        }
+        html += `<a href="#" class="page-link next" data-page="next"><i class="fas fa-chevron-right"></i></a>`;
+        pag.innerHTML = html;
+        pag.querySelectorAll('.page-link').forEach(link=>{
+            link.addEventListener('click',e=>{
+                e.preventDefault();
+                const v = link.dataset.page;
+                if (v==='prev' && this.currentPage>1) this.currentPage--;
+                else if (v==='next' && this.currentPage<totalPages) this.currentPage++;
+                else if (!isNaN(parseInt(v))) this.currentPage=parseInt(v);
+                this.applyPagination();
+            });
+        });
     }
 };
 
@@ -1327,7 +1399,19 @@ function addAdminButton() {
     const header = document.querySelector('header');
     if (!header) return;
     
-    // Kiểm tra xem có dữ liệu admin không
+    // Chỉ hiện với tài khoản admin đang đăng nhập
+    let currentUser = null;
+    try {
+        if (window.Auth && Auth.current) {
+            currentUser = Auth.current();
+        } else {
+            currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        }
+    } catch (e) {
+        currentUser = null;
+    }
+    if (!currentUser || currentUser.role !== 'admin') return;
+    
     const hasAdminData = localStorage.getItem('adminProducts') !== null;
     
     if (hasAdminData) {

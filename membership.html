@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Membership</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="style.css"><style>body{background:linear-gradient(180deg,#003d34,#00574b);color:#e5e7eb}.wrap{max-width:900px;margin:30px auto;padding:0 16px}.card{background:rgba(0,169,143,.12);border:1px solid rgba(0,169,143,.45);border-radius:12px;padding:16px}.title{font-size:22px;margin:0 0 12px}.progress{height:12px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}.progress>div{height:100%;background:#2ee6c5}.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.tier{background:rgba(0,169,143,.12);border:1px solid rgba(0,169,143,.35);padding:12px;border-radius:12px;text-align:center}.tier h3{margin:0 0 6px}</style></head>
+<body>
+<header class="header-main"><div class="logo"><i class="fas fa-crown"></i> MEMBERSHIP</div><nav class="nav-menu"><a href="index.html" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a><a href="account.html" class="nav-link"><i class="fas fa-user"></i> Tài khoản</a><a href="orders.html" class="nav-link"><i class="fas fa-receipt"></i> Lịch sử</a></nav></header>
+<div class="wrap">
+    <div class="card">
+        <h1 class="title"><i class="fas fa-user-shield"></i> Trạng thái của bạn</h1>
+        <div id="info"></div>
+        <div class="progress" style="margin:12px 0"><div id="bar" style="width:0%"></div></div>
+        <div id="next"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+        <h2 class="title"><i class="fas fa-layer-group"></i> Cấp bậc</h2>
+        <div class="tiers">
+            <div class="tier"><h3>Bronze</h3><div>0 VNĐ</div><div>Không giảm giá</div></div>
+            <div class="tier"><h3>Silver</h3><div>2.000.000.000 VNĐ</div><div>Giảm 3%</div></div>
+            <div class="tier"><h3>Gold</h3><div>5.000.000.000 VNĐ</div><div>Giảm 5%</div></div>
+        </div>
+    </div>
+</div>
+<script src="auth.js"></script><script src="customer-db.js"></script>
+<script>
+const u=JSON.parse(localStorage.getItem('currentUser')||'null');if(!u){location.href='auth.html';}
+CustomerDB.ensureProfile(u);const info=CustomerDB.getMembershipForUser(u.id);const me=CustomerDB.getProfile(u.id)||{};const spent=me.totalSpent||0;const level=info.level;const target=level==='bronze'?2000000000:(level==='silver'?5000000000:5000000000);const prev=level==='bronze'?0:(level==='silver'?2000000000:5000000000);const prog=Math.max(0,Math.min(100,Math.round(((spent-prev)/(target-prev))*100)));document.getElementById('info').innerHTML=`<div>Tên khách hàng: <strong>${me.name||u.name||''}</strong></div><div>Hạng: <strong>${info.label}</strong></div><div>Số đơn: <strong>${me.orderCount||0}</strong></div><div>Tổng chi tiêu: <strong>${spent.toLocaleString('vi-VN')} VNĐ</strong></div><div>Giảm giá theo hạng: <strong>${info.discount||0}%</strong></div>`;document.getElementById('bar').style.width=prog+'%';const nextLevel=level==='bronze'?'Silver':(level==='silver'?'Gold':'Gold');const need=Math.max(0,(target-spent));document.getElementById('next').innerHTML=level==='gold'?'Bạn đang ở hạng cao nhất':`Cần thêm <strong>${need.toLocaleString('vi-VN')} VNĐ</strong> để lên <strong>${nextLevel}</strong>`;
+</script>
+</body></html>

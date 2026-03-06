@@ -322,6 +322,9 @@ class AdminManager {
             const payment = (order.paymentMethod || 'cod').toUpperCase();
             const itemCount = Array.isArray(order.items) ? order.items.length : 0;
             const voucherCode = order.voucher?.code || '-';
+            const mem = order.membership || {};
+            const memLabel = mem.label || '-';
+            const memDiscountFormatted = this.formatPrice(mem.discountAmount || 0);
             const rawStatus = order.status || 'Chờ xác nhận';
             let status = rawStatus;
             if (rawStatus === 'processing' || rawStatus === 'pending') {
@@ -342,17 +345,20 @@ class AdminManager {
                     <td>${payment}</td>
                     <td>${itemCount}</td>
                     <td>${total}</td>
+                    <td>${memLabel}</td>
+                    <td>${memDiscountFormatted}</td>
                     <td>${voucherCode}</td>
                     <td>
                         <select class="order-status-select" onchange="admin.updateOrderStatus('${order.id}', this.value)">
                             ${optionsHtml}
                         </select>
                     </td>
+                    <td><button class="btn-secondary" onclick="admin.showOrderDetails('${order.id}')"><i class="fas fa-info-circle"></i> Chi tiết</button></td>
                 </tr>
             `;
         });
 
-        tableBody.innerHTML = html || '<tr><td colspan="8" style="text-align:center; padding: 40px;">Chưa có đơn hàng</td></tr>';
+        tableBody.innerHTML = html || '<tr><td colspan="11" style="text-align:center; padding: 40px;">Chưa có đơn hàng</td></tr>';
     }
 
     updateOrderStatus(orderId, newStatus) {
@@ -361,9 +367,33 @@ class AdminManager {
         if (!this.orderStatusOptions.includes(newStatus)) return;
         this.orders[index].status = newStatus;
         localStorage.setItem('adminOrders', JSON.stringify(this.orders));
+        localStorage.setItem('adminLastSync', Date.now());
         this.updateOrderCount();
         this.showNotification('Đã cập nhật trạng thái đơn hàng', 'success');
         this.renderOrders();
+    }
+
+    showOrderDetails(orderId){
+        const o = (this.orders||[]).find(x=>x.id===orderId);
+        if(!o) return;
+        const c = o.customer || {};
+        const mem = o.membership || {};
+        const memDiscount = this.formatPrice(mem.discountAmount || 0);
+        const voucher = o.voucher || null;
+        const lines = [
+            `Mã đơn: ${o.id}`,
+            `Ngày: ${new Date(o.date).toLocaleString('vi-VN')}`,
+            `Khách hàng: ${c.name||'Khách lẻ'}`,
+            `Email: ${c.email||'-'}`,
+            `SĐT: ${c.phone||'-'}`,
+            `Địa chỉ: ${c.address||'-'}`,
+            `Phương thức: ${o.paymentMethod||'-'}`,
+            `Hạng membership: ${mem.label||'-'} (${mem.discountPercent||0}%)`,
+            `Giảm theo hạng: ${memDiscount}`,
+            `Mã voucher: ${voucher ? voucher.code : '-'}`,
+            `Tổng tiền sau giảm: ${this.formatPrice(o.total)}`
+        ];
+        alert(lines.join('\n'));
     }
 
     openProductModal(product = null) {
@@ -481,9 +511,60 @@ class AdminManager {
 
     viewProduct(id) {
         const product = this.products.find(p => p.id === id);
-        if (product) {
-            alert(`Xem chi tiết: ${product.name}\n\n${product.description}`);
-        }
+        if (!product) return;
+
+        const existing = document.getElementById('viewProductModal');
+        if (existing) existing.remove();
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'modal';
+        wrapper.id = 'viewProductModal';
+        wrapper.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-eye"></i> Chi tiết sản phẩm</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="display:grid;grid-template-columns:1.2fr 1.8fr;gap:16px;align-items:flex-start">
+                        <div>
+                            <div style="border-radius:12px;overflow:hidden;border:1px solid rgba(148,163,184,.4);background:#0f172a">
+                                <img src="${product.image || ''}" alt="${product.name}"
+                                     onerror="this.src='https://via.placeholder.com/420x320/0f172a/ffffff?text=No+Image'"
+                                     style="width:100%;display:block;object-fit:cover;max-height:320px">
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="margin:0 0 6px;font-size:18px">${product.name}</h4>
+                            <div style="margin-bottom:10px;font-size:14px;color:#6b7280">
+                                ${product.category || ''} • ${product.status === 'active' ? 'Đang bán' : 'Ngừng bán'}
+                            </div>
+                            <div style="margin-bottom:12px">
+                                <span style="font-size:18px;font-weight:700;color:#059669">${(product.salePrice || product.price).toLocaleString('vi-VN')} VNĐ</span>
+                                ${product.salePrice ? `<span style="margin-left:8px;font-size:13px;color:#9ca3af;text-decoration:line-through">${(product.price||0).toLocaleString('vi-VN')} VNĐ</span>`:''}
+                            </div>
+                            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;font-size:13px;color:#6b7280">
+                                <div><strong>Kho:</strong> ${product.stock}</div>
+                                <div><strong>Chất liệu:</strong> ${product.material||'-'}</div>
+                                <div><strong>Xuất xứ:</strong> ${product.origin||'-'}</div>
+                            </div>
+                            <div style="margin-bottom:12px;font-size:13px;color:#4b5563">
+                                <strong>Mô tả:</strong>
+                                <p style="margin:4px 0 0;white-space:pre-line">${product.description||'-'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        document.body.appendChild(wrapper);
+
+        const closeBtn = wrapper.querySelector('.modal-close');
+        const close = () => wrapper.remove();
+        closeBtn.addEventListener('click', close);
+        wrapper.addEventListener('click', e => {
+            if (e.target === wrapper) close();
+        });
     }
 
     filterProducts(searchTerm = '') {

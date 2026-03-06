@@ -13,6 +13,34 @@
     
     <!-- CSS Chung -->
     <link rel="stylesheet" href="style.css">
+    <style>
+        body{background:linear-gradient(180deg,#003d34,#00574b);color:#e5e7eb}
+        .breaking-news{background:rgba(255,255,255,.03);border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06)}
+        .hero-news{display:grid;grid-template-columns:1fr;gap:20px;padding:24px}
+        .hero-card{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:14px;overflow:hidden}
+        .hero-thumb{display:block;background-size:cover;background-position:center;min-height:280px}
+        .hero-content{padding:20px}
+        .hero-title{font-family:Playfair Display,serif;font-size:28px;margin:0 0 10px}
+        .hero-excerpt{color:#9ca3af;margin:0 0 14px}
+        .hero-meta{display:flex;gap:14px;color:#9ca3af;font-size:14px}
+        .news-container{display:grid;grid-template-columns:1fr 340px;gap:24px;max-width:1200px;margin:0 auto;padding:20px}
+        .news-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+        .news-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden;transition:transform .2s}
+        .news-card:hover{transform:translateY(-2px)}
+        .news-thumb img{width:100%;height:180px;object-fit:cover;display:block}
+        .news-info{padding:14px}
+        .news-title{font-size:16px;margin:0 0 6px}
+        .news-excerpt{color:#9ca3af;font-size:14px;margin:0 0 10px}
+        .news-meta{display:flex;gap:10px;color:#9ca3af;font-size:12px}
+        .featured-news .news-card .news-thumb img{height:220px}
+        .sidebar .trending-item{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:8px}
+        .trending-item img{width:64px;height:48px;object-fit:cover;border-radius:8px}
+        .category-item,.tag{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;display:inline-flex;align-items:center;gap:8px}
+        .category-list{display:grid;gap:10px}
+        .tags-cloud{display:flex;flex-wrap:wrap;gap:8px}
+        @media(max-width:1024px){.news-container{grid-template-columns:1fr}.hero-card{grid-template-columns:1fr}.news-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:640px){.news-grid{grid-template-columns:1fr}}
+    </style>
 </head>
 <body>
     <!-- HEADER (Chung) -->
@@ -24,6 +52,7 @@
             <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a>
             <a href="products.html" class="nav-link"><i class="fas fa-gem"></i> Sản phẩm</a>
             <a href="news.html" class="nav-link active"><i class="fas fa-newspaper"></i> Tin tức</a>
+            <a href="orders.html" class="nav-link"><i class="fas fa-receipt"></i> Đơn hàng</a>
             <a href="gio-hang.html" class="nav-link cart-link">
                 <i class="fas fa-shopping-cart"></i> Giỏ hàng <span class="cart-count">0</span>
             </a>
@@ -47,7 +76,18 @@
 
     <!-- HERO NEWS (Trang tin tức) -->
     <section class="hero-news" id="heroNews">
-        <!-- Hero news được tải bằng JavaScript -->
+        <article class="hero-card">
+            <a href="#" class="hero-thumb" style="background-image:url('images/tintuchero.jpg')"></a>
+            <div class="hero-content">
+                <h1 class="hero-title"><a href="#">Triển lãm Ngọc Quý Quốc Tế 2024: Xu hướng và cơ hội đầu tư</a></h1>
+                <p class="hero-excerpt">Sự kiện quy tụ hơn 300 thương hiệu và nhà sưu tầm ngọc quý từ Myanmar, Hong Kong, Việt Nam với nhiều tác phẩm độc bản.</p>
+                <div class="hero-meta">
+                    <span><i class="fas fa-calendar"></i> 02/03/2026</span>
+                    <span><i class="fas fa-folder-open"></i> Thị trường</span>
+                    <span><i class="fas fa-eye"></i> 3.2K</span>
+                </div>
+            </div>
+        </article>
     </section>
 
     <!-- MAIN CONTENT (Trang tin tức) -->
@@ -63,14 +103,66 @@
             </div>
 
             <div class="news-grid" id="latestNews">
-                <!-- Tin tức được tải bằng JavaScript -->
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc1.png" alt="Ngọc phỉ thúy tăng giá"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Giá ngọc phỉ thúy loại A tăng mạnh đầu năm</a></h3>
+                        <p class="news-excerpt">Nhu cầu tại châu Á tăng cao khiến giá ngọc tự nhiên loại A tăng 12–18%.</p>
+                        <div class="news-meta"><span><i class="fas fa-calendar"></i> 28/02/2026</span><span><i class="fas fa-tag"></i> Thị trường</span></div>
+                    </div>
+                </article>
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc2.jpg" alt="Phong thủy"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">5 tiêu chí chọn ngọc hợp mệnh theo phong thủy</a></h3>
+                        <p class="news-excerpt">Chọn sắc độ, độ trong và chất ngọc phù hợp để kích hoạt năng lượng tốt.</p>
+                        <div class="news-meta"><span><i class="fas fa-calendar"></i> 26/02/2026</span><span><i class="fas fa-tag"></i> Phong thủy</span></div>
+                    </div>
+                </article>
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc3.jpg" alt="Văn hóa"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Biểu tượng hoa sen trong trang sức ngọc Việt</a></h3>
+                        <p class="news-excerpt">Hoa sen xuất hiện trong mỹ thuật và trang sức như biểu tượng thuần khiết.</p>
+                        <div class="news-meta"><span><i class="fas fa-calendar"></i> 24/02/2026</span><span><i class="fas fa-tag"></i> Văn hóa</span></div>
+                    </div>
+                </article>
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc2.jpg" alt="Sưu tầm"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Bí quyết bảo quản ngọc phỉ thúy luôn bóng đẹp</a></h3>
+                        <p class="news-excerpt">Tránh hóa chất mạnh, cất giữ nơi khô thoáng và làm sạch định kỳ.</p>
+                        <div class="news-meta"><span><i class="fas fa-calendar"></i> 22/02/2026</span><span><i class="fas fa-tag"></i> Mẹo hay</span></div>
+                    </div>
+                </article>
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc1.png" alt="Thị trường"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Bản đồ nguồn gốc ngọc bích: Những mỏ nổi tiếng</a></h3>
+                        <p class="news-excerpt">Kachin (Myanmar) và British Columbia là hai vùng mỏ có trữ lượng lớn.</p>
+                        <div class="news-meta"><span><i class="fas fa-calendar"></i> 20/02/2026</span><span><i class="fas fa-tag"></i> Kiến thức</span></div>
+                    </div>
+                </article>
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc3.jpg" alt="Phong cách"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Xu hướng thiết kế trang sức ngọc 2026</a></h3>
+                        <p class="news-excerpt">Tối giản, phối vàng 24K và họa tiết thủ công lên ngôi.</p>
+                        <div class="news-meta"><span><i class="fas fa-calendar"></i> 18/02/2026</span><span><i class="fas fa-tag"></i> Xu hướng</span></div>
+                    </div>
+                </article>
             </div>
 
             <!-- BÀI VIẾT NỔI BẬT -->
             <div class="featured-news">
                 <h2 class="featured-title">Bài viết nổi bật</h2>
                 <div class="news-card" id="featuredArticle">
-                    <!-- Nội dung bài viết nổi bật -->
+                    <a href="#" class="news-thumb"><img src="images/tintuc2.jpg" alt="Bài viết nổi bật"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Giải mã chất lượng ngọc phỉ thúy: Từ “Type A” đến “Type C”</a></h3>
+                        <p class="news-excerpt">Phân biệt xử lý bề mặt, nhuộm màu và đánh bóng; cách nhận biết bằng mắt và giấy chứng nhận.</p>
+                        <div class="news-meta"><span><i class="fas fa-user"></i> Chuyên gia đá quý</span><span><i class="fas fa-calendar"></i> 25/02/2026</span></div>
+                    </div>
                 </div>
             </div>
 
@@ -83,7 +175,30 @@
             </div>
 
             <div class="news-grid" id="cultureNews">
-                <!-- Tin văn hóa -->
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc3.jpg" alt="Nghệ thuật chạm khắc"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Nghệ thuật chạm khắc ngọc trong văn hóa Á Đông</a></h3>
+                        <p class="news-excerpt">Từ thời Hán đến hiện đại, kỹ nghệ chạm khắc lưu giữ tinh hoa văn hóa.</p>
+                        <div class="news-meta"><span><i class="fas fa-tag"></i> Văn hóa</span></div>
+                    </div>
+                </article>
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc1.png" alt="Truyền thuyết"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Truyền thuyết về ngọc linh khí và tượng cá chép</a></h3>
+                        <p class="news-excerpt">Hình tượng cá chép vượt vũ môn gắn liền với sự thăng tiến và tài lộc.</p>
+                        <div class="news-meta"><span><i class="fas fa-tag"></i> Truyền thuyết</span></div>
+                    </div>
+                </article>
+                <article class="news-card">
+                    <a href="#" class="news-thumb"><img src="images/tintuc2.jpg" alt="Lễ nghi"></a>
+                    <div class="news-info">
+                        <h3 class="news-title"><a href="#">Trang sức ngọc trong lễ nghi truyền thống</a></h3>
+                        <p class="news-excerpt">Ngọc gắn với các nghi lễ cưới hỏi và cúng tế, thể hiện sự trang trọng.</p>
+                        <div class="news-meta"><span><i class="fas fa-tag"></i> Lễ nghi</span></div>
+                    </div>
+                </article>
             </div>
 
             <!-- PAGINATION -->
@@ -105,7 +220,27 @@
                     <i class="fas fa-fire"></i> Tin đang hot
                 </h3>
                 <div class="trending-list" id="trendingNews">
-                    <!-- Trending news được tải bằng JavaScript -->
+                    <a href="#" class="trending-item">
+                        <img src="images/tintuc1.png" alt="Trending 1">
+                        <div class="trending-info">
+                            <h4>Giá ngọc tăng 15% quý I</h4>
+                            <span>28/02/2026</span>
+                        </div>
+                    </a>
+                    <a href="#" class="trending-item">
+                        <img src="images/tintuc2.jpg" alt="Trending 2">
+                        <div class="trending-info">
+                            <h4>Top 5 thiết kế dây chuyền ưa chuộng</h4>
+                            <span>24/02/2026</span>
+                        </div>
+                    </a>
+                    <a href="#" class="trending-item">
+                        <img src="images/tintuc3.jpg" alt="Trending 3">
+                        <div class="trending-info">
+                            <h4>Phong thủy: màu ngọc hợp mệnh</h4>
+                            <span>20/02/2026</span>
+                        </div>
+                    </a>
                 </div>
             </div>
 
@@ -115,7 +250,10 @@
                     <i class="fas fa-folder"></i> Danh mục
                 </h3>
                 <div class="category-list" id="categoryList">
-                    <!-- Categories được tải bằng JavaScript -->
+                    <a href="#" class="category-item"><i class="fas fa-yin-yang"></i> Phong thủy <span>128</span></a>
+                    <a href="#" class="category-item"><i class="fas fa-gem"></i> Ngọc quý <span>95</span></a>
+                    <a href="#" class="category-item"><i class="fas fa-landmark"></i> Văn hóa <span>76</span></a>
+                    <a href="#" class="category-item"><i class="fas fa-chart-line"></i> Thị trường <span>54</span></a>
                 </div>
             </div>
 
@@ -125,7 +263,12 @@
                     <i class="fas fa-tags"></i> Thẻ phổ biến
                 </h3>
                 <div class="tags-cloud" id="tagsCloud">
-                    <!-- Tags được tải bằng JavaScript -->
+                    <a href="#" class="tag">Ngọc phỉ thúy</a>
+                    <a href="#" class="tag">Phong thủy</a>
+                    <a href="#" class="tag">Văn hóa</a>
+                    <a href="#" class="tag">Đầu tư</a>
+                    <a href="#" class="tag">Trang sức</a>
+                    <a href="#" class="tag">Cổ vật</a>
                 </div>
             </div>
 
@@ -262,6 +405,7 @@
 
     <!-- JavaScript -->
     <script src="connect.js"></script>
+    <script src="auth.js"></script>
     <script type="module" src="script.js"></script>
     <script>
         // Cập nhật số lượng giỏ hàng

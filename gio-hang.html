@@ -16,16 +16,17 @@
     
     <!-- CSS Giỏ Hàng -->
     <style>
+        body{background:linear-gradient(180deg,#003d34,#00574b);color:#e5e7eb}
         /* =========================================== */
         /* CSS RIÊNG CHO TRANG GIỎ HÀNG */
         /* =========================================== */
 
         /* BREADCRUMB */
         .breadcrumb {
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
             padding: 20px 0;
             margin-bottom: 40px;
-            border-bottom: 2px solid rgba(0, 121, 107, 0.1);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.08);
         }
 
         .breadcrumb .container {
@@ -39,18 +40,18 @@
         }
 
         .breadcrumb a {
-            color: var(--jade-medium);
+            color: #93c5fd;
             text-decoration: none;
             transition: color 0.3s;
         }
 
         .breadcrumb a:hover {
-            color: var(--jade-dark);
+            color: #60a5fa;
             text-decoration: underline;
         }
 
         .breadcrumb span {
-            color: var(--gold);
+            color: #e5e7eb;
             font-weight: 600;
         }
 
@@ -114,10 +115,10 @@
         .empty-cart {
             text-align: center;
             padding: 80px 40px;
-            background: white;
+            background: rgba(255,255,255,0.04);
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 87, 75, 0.1);
-            border: 2px solid var(--border-color);
+            box-shadow: none;
+            border: 1px solid rgba(255,255,255,0.06);
         }
 
         .empty-cart i {
@@ -871,6 +872,7 @@
             <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a>
             <a href="products.html" class="nav-link"><i class="fas fa-gem"></i> Sản phẩm</a>
             <a href="news.html" class="nav-link"><i class="fas fa-newspaper"></i> Tin tức</a>
+            <a href="orders.html" class="nav-link"><i class="fas fa-receipt"></i> Đơn hàng</a>
             <a href="gio-hang.html" class="nav-link active"><i class="fas fa-shopping-cart"></i> Giỏ hàng <span class="cart-count">0</span></a>
         </nav>
         <button class="mobile-menu-btn" id="mobileMenuBtn">
@@ -1055,7 +1057,7 @@
                         </div>
 
                         <!-- Checkout Button -->
-                        <button class="btn-checkout" id="checkoutBtn" onclick="cartPage.showShippingModal()">
+                        <button class="btn-checkout" id="checkoutBtn" type="button">
                             <i class="fas fa-lock"></i> THANH TOÁN AN TOÀN
                         </button>
 
@@ -1187,6 +1189,9 @@
     <script src="connect.js"></script>
     <script src="admin/voucher-db.js"></script>
     <script src="voucher-system.js"></script>
+    <script src="auth.js"></script>
+    <script src="customer-db.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script>
         // =========================================== //
         // JAVASCRIPT CHO TRANG GIỎ HÀNG
@@ -1230,6 +1235,9 @@
                         "Huyện Cần Giờ"
                     ]
                 };
+                this.orderEmailServiceId = 'YOUR_EMAILJS_SERVICE_ID';
+                this.orderEmailTemplateId = 'YOUR_EMAILJS_TEMPLATE_ID';
+                this.orderEmailPublicKey = 'YOUR_EMAILJS_PUBLIC_KEY';
                 this.init();
             }
 
@@ -1959,17 +1967,6 @@
                                               rows="2"></textarea>
                                 </div>
 
-                                <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-ticket-alt"></i> Mã giảm giá (liên kết admin)
-                                    </label>
-                                    <div style="display:flex; gap:10px;">
-                                        <input type="text" id="voucherCodeInputModal" placeholder="Nhập mã giảm giá...">
-                                        <button type="button" class="btn-secondary" onclick="cartPage.applyVoucherFromModal()">
-                                            Áp dụng
-                                        </button>
-                                    </div>
-                                </div>
 
                                 <div class="shipping-summary">
                                     <h3><i class="fas fa-shopping-bag"></i> Tóm tắt đơn hàng</h3>
@@ -2005,6 +2002,10 @@
 
                 // Setup form validation and submission
                 const shippingForm = modal.querySelector('#shippingForm');
+                if (!shippingForm) {
+                    console.error('Không tìm thấy form giao hàng');
+                    return;
+                }
                 shippingForm.addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.validateAndSubmitShipping(modal);
@@ -2012,13 +2013,18 @@
             }
 
             validateAndSubmitShipping(modal) {
-                const name = document.getElementById('customerName').value.trim();
-                const email = document.getElementById('customerEmail').value.trim();
-                const phone = document.getElementById('customerPhone').value.trim();
-                const province = document.getElementById('customerProvince').value.trim();
-                const district = document.getElementById('customerDistrict').value.trim();
-                const addressDetail = document.getElementById('customerAddressDetail').value.trim();
-                const note = document.getElementById('customerNote').value.trim();
+                if (!modal) {
+                    console.error('Modal giao hàng không tồn tại');
+                    return;
+                }
+
+                const name = modal.querySelector('#customerName')?.value.trim() || '';
+                const email = modal.querySelector('#customerEmail')?.value.trim() || '';
+                const phone = modal.querySelector('#customerPhone')?.value.trim() || '';
+                const province = modal.querySelector('#customerProvince')?.value.trim() || '';
+                const district = modal.querySelector('#customerDistrict')?.value.trim() || '';
+                const addressDetail = modal.querySelector('#customerAddressDetail')?.value.trim() || '';
+                const note = modal.querySelector('#customerNote')?.value.trim() || '';
 
                 // Validation
                 if (!name) {
@@ -2026,13 +2032,13 @@
                     return;
                 }
 
-                if (!email || !/.+@.+\..+/.test(email)) {
-                    this.showNotification('Vui lòng nhập email hợp lệ', 'error');
+                if (!email) {
+                    this.showNotification('Vui lòng nhập email', 'error');
                     return;
                 }
 
-                if (!phone || !this.validatePhone(phone)) {
-                    this.showNotification('Vui lòng nhập số điện thoại hợp lệ', 'error');
+                if (!phone) {
+                    this.showNotification('Vui lòng nhập số điện thoại', 'error');
                     return;
                 }
 
@@ -2072,8 +2078,13 @@
             }
 
             validatePhone(phone) {
-                const phoneRegex = /^(0[0-9]{9,10})$/;
-                return phoneRegex.test(phone);
+                if (!phone) return false;
+                let digits = phone.replace(/\D/g, '');
+                if (digits.startsWith('84')) {
+                    digits = '0' + digits.slice(2);
+                }
+                const phoneRegex = /^0[0-9]{9}$/;
+                return phoneRegex.test(digits);
             }
 
             validateCartStock() {
@@ -2223,33 +2234,6 @@
                 document.body.appendChild(modal);
             }
 
-            applyVoucherFromModal() {
-                const input = document.getElementById('voucherCodeInputModal');
-                if (!input) return;
-                const code = input.value.trim().toUpperCase();
-                if (!code) {
-                    this.showNotification('Vui lòng nhập mã giảm giá', 'error');
-                    return;
-                }
-                (async () => {
-                    try {
-                        const cartData = this.getCartDataForValidation();
-                        const customerId = this.getCurrentCustomerId ? this.getCurrentCustomerId() : 'guest';
-                        const validation = await voucherValidator.validate(code, cartData, customerId);
-                        if (!validation.isValid) {
-                            this.showNotification(validation.error, 'error');
-                            return;
-                        }
-                        voucherSystem.currentVoucher = validation.steps.step2.voucher;
-                        voucherSystem.calculateDiscount(cartData);
-                        voucherSystem.updateCartTotal();
-                        this.showNotification('Áp dụng mã giảm giá thành công!', 'success');
-                    } catch (e) {
-                        this.showNotification('Không thể áp dụng mã giảm giá', 'error');
-                    }
-                })();
-            }
-
             submitOrder() {
                 const stockValidation = this.validateCartStock();
                 if (!stockValidation.isValid) return;
@@ -2257,12 +2241,25 @@
                 const shippingInfo = JSON.parse(localStorage.getItem('shippingInfo') || '{}');
                 const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value || 'cod';
                 const subtotal = this.calculateSubtotal();
-                const discount = voucherSystem?.discount || 0;
-                const total = this.calculateTotal();
+                const voucherDiscount = voucherSystem?.discount || 0;
+                let membershipInfo = null;
+                try{
+                    const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
+                    if(cu && window.CustomerDB && CustomerDB.getMembershipForUser){
+                        membershipInfo = CustomerDB.getMembershipForUser(cu.id);
+                    }
+                }catch(e){}
+                const membershipPercent = membershipInfo ? (membershipInfo.discount || 0) : 0;
+                const membershipDiscount = Math.floor(subtotal * membershipPercent / 100);
+                const discount = voucherDiscount + membershipDiscount;
+                const total = subtotal + this.shippingFee - discount;
 
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
                 const order = {
                     id: 'DH' + Date.now(),
                     date: new Date().toISOString(),
+                    userId: currentUser ? currentUser.id : (localStorage.getItem('customerId') || null),
+                    userRole: currentUser ? currentUser.role : 'guest',
                     customer: {
                         name: shippingInfo.name || '',
                         email: shippingInfo.email || '',
@@ -2277,6 +2274,12 @@
                         quantity: item.quantity || 1
                     })),
                     subtotal,
+                    membership: {
+                        level: membershipInfo ? membershipInfo.level : 'bronze',
+                        label: membershipInfo ? membershipInfo.label : 'Bronze',
+                        discountPercent: membershipPercent,
+                        discountAmount: membershipDiscount
+                    },
                     discount,
                     shippingFee: this.shippingFee,
                     total,
@@ -2285,7 +2288,7 @@
                         type: voucherSystem.currentVoucher.type,
                         value: voucherSystem.currentVoucher.value
                     } : null,
-                    status: 'processing'
+                    status: 'Chờ xác nhận'
                 };
 
                 try {
@@ -2301,6 +2304,15 @@
                 } catch (e) {
                     console.error('Không thể lưu đơn hàng vào admin:', e);
                 }
+
+                try {
+                    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+                    if (currentUser && window.CustomerDB && CustomerDB.addOrder) {
+                        CustomerDB.addOrder(currentUser.id, order);
+                    }
+                } catch (_) {}
+
+                this.sendOrderConfirmationEmail(order);
 
                 if (voucherSystem && typeof voucherSystem.completeCheckout === 'function') {
                     voucherSystem.completeCheckout({
@@ -2334,6 +2346,46 @@
 
             printOrder() {
                 window.print();
+            }
+
+            async sendOrderConfirmationEmail(order) {
+                try {
+                    const customerEmail = order.customer?.email;
+                    if (!customerEmail) {
+                        return;
+                    }
+                    const hasEmailJs = typeof emailjs !== 'undefined';
+                    if (!hasEmailJs) {
+                        return;
+                    }
+                    if (!this.orderEmailServiceId || !this.orderEmailTemplateId || !this.orderEmailPublicKey) {
+                        return;
+                    }
+
+                    if (!emailjs.__cart_init_done) {
+                        emailjs.init(this.orderEmailPublicKey);
+                        emailjs.__cart_init_done = true;
+                    }
+
+                    const itemLines = (order.items || []).map(item => {
+                        const price = this.formatPrice(item.price);
+                        return `${item.name} x ${item.quantity} - ${price}`;
+                    }).join('\n');
+
+                    const params = {
+                        to_email: customerEmail,
+                        to_name: order.customer?.name || 'Quý khách',
+                        order_id: order.id,
+                        order_total: this.formatPrice(order.total),
+                        order_items: itemLines,
+                        order_address: order.customer?.address || '',
+                        payment_method: this.getPaymentMethodName()
+                    };
+
+                    await emailjs.send(this.orderEmailServiceId, this.orderEmailTemplateId, params);
+                } catch (error) {
+                    console.error('Không thể gửi email xác nhận đơn hàng:', error);
+                }
             }
 
             loadRecentlyViewed() {

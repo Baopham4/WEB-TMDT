@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="admin-style.css">
+    <script src="../auth.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',function(){if(window.Auth&&Auth.enforceAdmin)Auth.enforceAdmin()})</script>
 </head>
 <body>
     <!-- Admin Header -->
@@ -19,6 +21,9 @@
         <div class="admin-actions">
             <button class="btn-secondary" id="syncBtn">
                 <i class="fas fa-sync"></i> Đồng bộ với website
+            </button>
+            <button class="btn-secondary" id="logoutAdmin">
+                <i class="fas fa-sign-out-alt"></i> Đăng xuất
             </button>
             <button class="btn-primary" id="backToSite">
                 <i class="fas fa-external-link-alt"></i> Về trang chính
@@ -43,9 +48,9 @@
                     <span>Quản lý sản phẩm</span>
                     <span class="badge" id="productCount">0</span>
                 </a>
-                <a href="#" class="nav-item" data-tab="categories">
-                    <i class="fas fa-folder"></i>
-                    <span>Danh mục</span>
+                <a href="#" class="nav-item" data-tab="history">
+                    <i class="fas fa-history"></i>
+                    <span>Lịch sử mua hàng</span>
                 </a>
                 <a href="#" class="nav-item" data-tab="vouchers">
                     <i class="fas fa-ticket-alt"></i>
@@ -56,6 +61,22 @@
                     <i class="fas fa-shopping-cart"></i>
                     <span>Đơn hàng</span>
                     <span class="badge" id="orderCount">0</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="customers">
+                    <i class="fas fa-users"></i>
+                    <span>Khách hàng</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="memberships">
+                    <i class="fas fa-crown"></i>
+                    <span>Membership</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="campaigns">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Chiến dịch</span>
                 </a>
                 <a href="#" class="nav-item" data-tab="settings">
                     <i class="fas fa-cog"></i>
@@ -175,15 +196,12 @@
                 </div>
             </section>
 
-            <!-- Categories Management (Hidden by default) -->
-            <section class="tab-content" id="categoriesTab">
+            <!-- Purchase History (replace categories) -->
+            <section class="tab-content" id="historyTab">
                 <div class="section-header">
-                    <h2><i class="fas fa-folder"></i> Quản lý danh mục</h2>
-                    <button class="btn-success" id="addCategoryBtn">
-                        <i class="fas fa-plus"></i> Thêm danh mục
-                    </button>
+                    <h2><i class="fas fa-history"></i> Lịch sử mua hàng</h2>
                 </div>
-                <!-- Categories content -->
+                <div id="historyPanel"></div>
             </section>
 
             <!-- Voucher Management -->
@@ -256,8 +274,11 @@
                                 <th>Thanh toán</th>
                                 <th>Số sản phẩm</th>
                                 <th>Tổng tiền</th>
+                                <th>Hạng</th>
+                                <th>Giảm giá</th>
                                 <th>Voucher</th>
                                 <th>Trạng thái</th>
+                                <th>Chi tiết</th>
                             </tr>
                         </thead>
                         <tbody id="ordersTable">
@@ -265,6 +286,34 @@
                         </tbody>
                     </table>
                 </div>
+            </section>
+
+            <section class="tab-content" id="customersTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-users"></i> Khách hàng</h2>
+                </div>
+                <div id="customersTable"></div>
+            </section>
+
+            <section class="tab-content" id="membershipsTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-crown"></i> Membership</h2>
+                </div>
+                <div id="membershipsPanel"></div>
+            </section>
+
+            <section class="tab-content" id="dashboardTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
+                </div>
+                <div id="dashboardPanel"></div>
+            </section>
+
+            <section class="tab-content" id="campaignsTab">
+                <div class="section-header">
+                    <h2><i class="fas fa-bullhorn"></i> Chiến dịch</h2>
+                </div>
+                <div id="campaignsPanel"></div>
             </section>
 
             <!-- Settings (Hidden by default) -->
@@ -520,3 +569,184 @@
     <script src="voucher-db.js"></script>
     <script src="voucher-admin.js"></script>
     <script src="admin-script.js"></script>
+    <script src="../customer-db.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded',function(){
+            function showTab(name){
+                document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('active'));
+                const map={products:'productsTab',history:'historyTab',vouchers:'vouchersTab',orders:'ordersTab',customers:'customersTab',memberships:'membershipsTab',dashboard:'dashboardTab',campaigns:'campaignsTab',settings:'settingsTab'};
+                const el=document.getElementById(map[name]);if(el)el.classList.add('active');
+            }
+            document.querySelectorAll('.admin-nav .nav-item').forEach(item=>{
+                item.addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.admin-nav .nav-item').forEach(i=>i.classList.remove('active'));item.classList.add('active');showTab(item.dataset.tab);if(item.dataset.tab==='customers'){renderCustomers()}if(item.dataset.tab==='memberships'){renderMemberships()}if(item.dataset.tab==='dashboard'){renderDashboard()}if(item.dataset.tab==='campaigns'){renderCampaigns()}if(item.dataset.tab==='history'){renderHistory()}})
+            });
+            function renderCustomers(){
+                const list=(window.CustomerDB&&CustomerDB.listCustomers?CustomerDB.listCustomers():[]);
+                const orders=JSON.parse(localStorage.getItem('adminOrders')||'[]');
+                const enriched=list.map(c=>{
+                    if(!c.name||!c.email){
+                        const o=orders.find(o=>o.userId===c.id&&o.customer);
+                        if(o){
+                            c={...c,name:c.name||o.customer.name||'',email:c.email||o.customer.email||'',phone:c.phone||o.customer.phone||'',address:c.address||o.customer.address||''};
+                        }
+                    }
+                    return c;
+                }).sort((a,b)=> (a.id||'').localeCompare(b.id||''));
+                const header=`<div style="display:grid;grid-template-columns:1fr 1.5fr 1.2fr 1.8fr 2fr;gap:8px;padding:8px 8px;font-weight:700;border-bottom:1px solid rgba(0,0,0,.1)"> <div>ID</div><div>Họ tên</div><div>Số điện thoại</div><div>Email</div><div>Địa chỉ</div></div>`;
+                const rows=enriched.map(c=>`<div style="display:grid;grid-template-columns:1fr 1.5fr 1.2fr 1.8fr 2fr;gap:8px;padding:8px;border-bottom:1px solid rgba(0,0,0,.05)"><div>${c.id||'-'}</div><div>${c.name||'(Chưa đặt tên)'}</div><div>${c.phone||'-'}</div><div>${c.email||''}</div><div>${c.address||'-'}</div></div>`).join('');
+                document.getElementById('customersTable').innerHTML=(enriched.length?header+rows:'Chưa có khách hàng');
+            }
+            function renderMemberships(){
+                const list=(window.CustomerDB&&CustomerDB.listCustomers?CustomerDB.listCustomers():[]);
+                const tiers={Bronze:0,Silver:0,Gold:0};
+                list.forEach(c=>{const t=c.tier||'Bronze';tiers[t]=(tiers[t]||0)+1});
+                const summary=`<div>Bronze: <strong>${tiers['Bronze']||0}</strong></div>
+                               <div>Silver: <strong>${tiers['Silver']||0}</strong></div>
+                               <div>Gold: <strong>${tiers['Gold']||0}</strong></div>`;
+
+                const enriched=[...list].sort((a,b)=>(b.totalSpent||0)-(a.totalSpent||0));
+                const header=`<div style="margin-top:16px;font-weight:700">Danh sách hội viên</div>
+                               <div style="display:grid;grid-template-columns:1.6fr 1fr 0.8fr 1.2fr;gap:8px;padding:8px 8px;font-weight:700;border-bottom:1px solid rgba(0,0,0,.1)">
+                                    <div>Tên khách hàng</div>
+                                    <div>Hạng</div>
+                                    <div>Số đơn</div>
+                                    <div>Tổng chi tiêu</div>
+                               </div>`;
+                const rows=enriched.map(c=>`
+                    <div style="display:grid;grid-template-columns:1.6fr 1fr 0.8fr 1.2fr;gap:8px;padding:8px;border-bottom:1px solid rgba(0,0,0,.05)">
+                        <div>${c.name||'(Chưa đặt tên)'}</div>
+                        <div>${c.tier||'Bronze'}</div>
+                        <div>${c.orderCount||0}</div>
+                        <div>${(c.totalSpent||0).toLocaleString('vi-VN')} VNĐ</div>
+                    </div>`).join('');
+
+                document.getElementById('membershipsPanel').innerHTML = summary + (enriched.length?header+rows:'');
+            }
+
+            function renderHistory(){
+                const customers=(window.CustomerDB&&CustomerDB.listCustomers?CustomerDB.listCustomers():[]);
+                const orders=JSON.parse(localStorage.getItem('adminOrders')||'[]');
+                const historyMap={};
+                orders.forEach(o=>{
+                    if(!o.userId)return;
+                    const uid=o.userId;
+                    if(!historyMap[uid])historyMap[uid]={id:uid,name:'',email:'',itemCount:0,total:0,orders:0};
+                    const h=historyMap[uid];
+                    const c=customers.find(x=>x.id===uid);
+                    if(c){h.name=c.name||h.name;h.email=c.email||h.email;}
+                    h.orders+=1;
+                    h.total+=(Number(o.total)||0);
+                    if(Array.isArray(o.items)){h.itemCount+=o.items.reduce((s,it)=>s+(it.quantity||1),0);}
+                });
+                const list=Object.values(historyMap).sort((a,b)=>b.total-a.total);
+                const header=list.length?`
+                    <div style="font-weight:700;margin-bottom:8px">Lịch sử mua hàng theo khách</div>
+                    <div style="display:grid;grid-template-columns:1fr 1.5fr 2fr 0.8fr 1.3fr 0.8fr;gap:8px;padding:8px 8px;font-weight:700;border-bottom:1px solid rgba(0,0,0,.1)">
+                        <div>ID</div>
+                        <div>Họ tên</div>
+                        <div>Email</div>
+                        <div>Số sản phẩm</div>
+                        <div>Tổng chi tiêu</div>
+                        <div>Số đơn</div>
+                    </div>`:'Chưa có dữ liệu mua hàng';
+                const rows=list.map(h=>`
+                    <div style="display:grid;grid-template-columns:1fr 1.5fr 2fr 0.8fr 1.3fr 0.8fr;gap:8px;padding:8px;border-bottom:1px solid rgba(0,0,0,.05)">
+                        <div>${h.id}</div>
+                        <div>${h.name||'(Chưa đặt tên)'}</div>
+                        <div>${h.email||'-'}</div>
+                        <div>${h.itemCount}</div>
+                        <div>${(h.total||0).toLocaleString('vi-VN')} VNĐ</div>
+                        <div>${h.orders}</div>
+                    </div>`).join('');
+                document.getElementById('historyPanel').innerHTML = header + (list.length?rows:'');
+            }
+            function renderDashboard(){
+                const m=(window.CustomerDB&&CustomerDB.getMetrics?CustomerDB.getMetrics():{totalCustomers:0,totalRevenue:0,byDay:{},topCustomers:[]});
+                const orders=JSON.parse(localStorage.getItem('adminOrders')||'[]');
+                const totalOrders=orders.length;
+                const todayStr=new Date().toISOString().slice(0,10);
+                const todayRevenue=(m.byDay && m.byDay[todayStr])?m.byDay[todayStr]:0;
+
+                const byDayEntries=Object.entries(m.byDay||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+                const lastDays=byDayEntries.slice(-7);
+                const max=Math.max(1,...lastDays.map(x=>x[1]));
+                const chartRows=lastDays.map(([d,val])=>`<div class="chart-row">
+                    <div>${d}</div>
+                    <div><div class="chart-bar" style="width:${Math.round((val/max)*100)}%"></div></div>
+                    <div style="text-align:right">${(val||0).toLocaleString('vi-VN')} VNĐ</div>
+                </div>`).join('');
+
+                const customers=(window.CustomerDB&&CustomerDB.listCustomers?CustomerDB.listCustomers():[]);
+                const topCustomers=[...customers].sort((a,b)=>(b.totalSpent||0)-(a.totalSpent||0)).slice(0,5);
+                const topRows=topCustomers.map(c=>`<div class="top-list-row">
+                    <div>${c.name||'(Chưa đặt tên)'}</div>
+                    <div style="text-align:right">${(c.totalSpent||0).toLocaleString('vi-VN')} VNĐ</div>
+                </div>`).join('');
+
+                document.getElementById('dashboardPanel').innerHTML=`
+                    <div class="dashboard-grid">
+                        <div class="dashboard-metric">
+                            <div>
+                                <div class="dashboard-metric-label">Tổng đơn hàng</div>
+                                <div class="dashboard-metric-value">${totalOrders}</div>
+                            </div>
+                            <div class="dashboard-metric-sub">Từ trước đến nay</div>
+                        </div>
+                        <div class="dashboard-metric">
+                            <div>
+                                <div class="dashboard-metric-label">Tổng khách hàng</div>
+                                <div class="dashboard-metric-value">${m.totalCustomers||0}</div>
+                            </div>
+                            <div class="dashboard-metric-sub">Khách đã có hồ sơ</div>
+                        </div>
+                        <div class="dashboard-metric">
+                            <div>
+                                <div class="dashboard-metric-label">Doanh thu</div>
+                                <div class="dashboard-metric-value">${(m.totalRevenue||0).toLocaleString('vi-VN')} VNĐ</div>
+                            </div>
+                            <div class="dashboard-metric-sub">Tổng cộng</div>
+                        </div>
+                        <div class="dashboard-metric">
+                            <div>
+                                <div class="dashboard-metric-label">Doanh thu hôm nay</div>
+                                <div class="dashboard-metric-value">${todayRevenue.toLocaleString('vi-VN')} VNĐ</div>
+                            </div>
+                            <div class="dashboard-metric-sub">${todayStr}</div>
+                        </div>
+                    </div>
+                    <div class="dashboard-row">
+                        <div class="dashboard-card">
+                            <h3>Doanh thu 7 ngày gần nhất</h3>
+                            <div>${chartRows || 'Không có dữ liệu'}</div>
+                        </div>
+                        <div class="dashboard-card">
+                            <h3>Top khách hàng</h3>
+                            <div>${topRows || 'Chưa có khách'}</div>
+                        </div>
+                    </div>`;
+            }
+            function renderCampaigns(){const promos=(window.CustomerDB&&CustomerDB.getPromotions?CustomerDB.getPromotions():[]);document.getElementById('campaignsPanel').innerHTML=promos.map(p=>`<div style="padding:8px;border:1px solid rgba(0,0,0,.05);border-radius:8px;margin-bottom:8px"><div><strong>${p.title}</strong></div><div>${p.desc}</div><div>Mã: <strong>${p.code}</strong></div></div>`).join('')}
+        })
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded',function(){
+            var btn=document.getElementById('logoutAdmin');
+            if(btn){btn.addEventListener('click',function(){if(window.Auth&&Auth.logout){Auth.logout();window.location.href='../auth.html?mode=admin'}})}
+            var params=new URLSearchParams(location.search);
+            var oid=params.get('orderId');
+            if(oid){
+                var ordersNav=document.querySelector('.admin-nav .nav-item[data-tab="orders"]');
+                if(ordersNav){ordersNav.click()}
+                setTimeout(function(){
+                    var rows=document.querySelectorAll('#ordersTable tr');
+                    rows.forEach(function(r){
+                        var idCell=r.querySelector('td');
+                        if(idCell&&idCell.textContent.trim()===oid){
+                            r.style.outline='2px solid #22c55e';
+                            r.scrollIntoView({behavior:'smooth',block:'center'});
+                        }
+                    });
+                },800);
+            }
+        })
+    </script>

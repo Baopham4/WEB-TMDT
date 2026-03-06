@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Ưu đãi</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="style.css"><style>body{background:linear-gradient(180deg,#003d34,#00574b);color:#e5e7eb}.wrap{max-width:1000px;margin:30px auto;padding:0 16px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{background:rgba(0,169,143,.12);border:1px solid rgba(0,169,143,.45);border-radius:12px;padding:14px}.title{font-size:22px;margin:0 0 12px}.btn{padding:10px 12px;border-radius:10px;border:0;background:#00b59d;color:#06121a;font-weight:700;cursor:pointer;width:100%}</style></head>
+<body>
+<header class="header-main"><div class="logo"><i class="fas fa-tags"></i> ƯU ĐÃI</div><nav class="nav-menu"><a href="index.html" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a><a href="membership.html" class="nav-link"><i class="fas fa-crown"></i> Membership</a><a href="orders.html" class="nav-link"><i class="fas fa-receipt"></i> Lịch sử</a></nav></header>
+<div class="wrap">
+    <h1 class="title"><i class="fas fa-gift"></i> Ưu đãi dành cho bạn</h1>
+    <div id="list" class="grid"></div>
+</div>
+<script src="customer-db.js"></script>
+<script>
+const promos=CustomerDB.getPromotions();const c=document.getElementById('list');promos.forEach(p=>{const el=document.createElement('div');el.className='card';el.innerHTML=`<h3>${p.title}</h3><p>${p.desc}</p><div>Mã: <strong>${p.code}</strong></div><button class="btn" onclick="copyCode('${p.code}')"><i class="fas fa-copy"></i> Sao chép mã</button>`;c.appendChild(el)});function copyCode(t){navigator.clipboard.writeText(t);alert('Đã sao chép mã: '+t)}
+</script>
+</body></html>

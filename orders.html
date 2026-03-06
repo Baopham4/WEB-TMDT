@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn hàng của tôi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body{background:linear-gradient(180deg,#003d34,#00574b);color:#e5e7eb}
+        .orders-wrapper{max-width:1100px;margin:30px auto;padding:0 16px}
+        .orders-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+        .orders-title{font-size:24px}
+        .orders-controls{display:flex;gap:10px;flex-wrap:wrap}
+        .orders-controls input,.orders-controls select{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#0b1223;color:#e5e7eb}
+        .orders-list{display:grid;gap:12px}
+        .order-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px;display:grid;grid-template-columns:2fr 1fr;gap:12px}
+        .order-main{display:flex;flex-direction:column;gap:6px}
+        .order-id{font-weight:700}
+        .order-meta{display:flex;gap:12px;color:#9ca3af;font-size:14px;flex-wrap:wrap}
+        .order-status{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:12px}
+        .s-processing{background:rgba(59,130,246,.15);color:#93c5fd}
+        .s-confirmed{background:rgba(34,197,94,.15);color:#86efac}
+        .s-shipping{background:rgba(234,179,8,.15);color:#fde68a}
+        .s-delivered{background:rgba(16,185,129,.15);color:#6ee7b7}
+        .s-cancelled{background:rgba(244,63,94,.15);color:#fca5a5}
+        .order-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}
+        .btn{padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#0b1223;color:#e5e7eb;cursor:pointer}
+        .btn-primary{background:#22c55e;color:#06121a;border:0}
+        .order-items{margin-top:8px;color:#9ca3af;font-size:14px}
+        .empty{padding:18px;text-align:center;color:#9ca3af;border:1px dashed rgba(255,255,255,.2);border-radius:12px}
+        @media(max-width:700px){.order-card{grid-template-columns:1fr}.order-actions{justify-content:flex-start}}
+    </style>
+    <script src="connect.js"></script>
+    <script src="auth.js"></script>
+</head>
+<body>
+    <header class="header-main">
+        <div class="logo"><i class="fas fa-receipt"></i> ĐƠN HÀNG</div>
+        <nav class="nav-menu">
+            <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Trang chủ</a>
+            <a href="products.html" class="nav-link"><i class="fas fa-gem"></i> Sản phẩm</a>
+            <a href="news.html" class="nav-link"><i class="fas fa-newspaper"></i> Tin tức</a>
+            <a href="orders.html" class="nav-link active"><i class="fas fa-receipt"></i> Đơn hàng</a>
+            <a href="gio-hang.html" class="nav-link cart-link"><i class="fas fa-shopping-cart"></i> Giỏ hàng <span class="cart-count">0</span></a>
+        </nav>
+        <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+    </header>
+
+    <div class="orders-wrapper">
+        <div class="orders-header">
+            <h1 class="orders-title"><i class="fas fa-clipboard-list"></i> Đơn hàng của tôi</h1>
+            <div class="orders-controls">
+                <input type="text" id="searchInput" placeholder="Tìm theo mã đơn...">
+                <select id="statusFilter">
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="processing">Đang xử lý</option>
+                    <option value="confirmed">Đã xác nhận</option>
+                    <option value="shipping">Đang giao</option>
+                    <option value="delivered">Đã giao</option>
+                    <option value="cancelled">Đã hủy</option>
+                </select>
+            </div>
+        </div>
+        <div id="ordersList" class="orders-list"></div>
+        <div id="emptyState" class="empty" style="display:none"></div>
+    </div>
+
+    <script>
+        const statusMap = {
+            processing: { text: 'Đang xử lý', cls: 's-processing' },
+            confirmed:  { text: 'Đã xác nhận', cls: 's-confirmed' },
+            shipping:   { text: 'Đang giao', cls: 's-shipping' },
+            delivered:  { text: 'Đã giao', cls: 's-delivered' },
+            cancelled:  { text: 'Đã hủy', cls: 's-cancelled' }
+        };
+        function normalizeStatus(raw){
+            const v = (raw||'').toString().trim();
+            const mapViToCode = {
+                'Chờ xác nhận':'processing',
+                'Đã xác nhận':'confirmed',
+                'Đang giao':'shipping',
+                'Đã giao':'delivered',
+                'Đã hủy':'cancelled'
+            };
+            const codeCandidates = ['processing','confirmed','shipping','delivered','cancelled'];
+            const code = codeCandidates.includes(v) ? v : (mapViToCode[v] || 'processing');
+            const info = statusMap[code] || statusMap.processing;
+            return { code, text: info.text, cls: info.cls };
+        }
+
+        function parsePrice(num){try{return Number(num)||0}catch(e){return 0}}
+        function formatPrice(num){return (Number(num)||0).toLocaleString('vi-VN')+' VNĐ'}
+        function getCurrentUserId(){
+            try{
+                const u = JSON.parse(localStorage.getItem('currentUser')||'null');
+                if (u && u.id) return u.id;
+            }catch(e){}
+            const cid = localStorage.getItem('customerId');
+            return cid || null;
+        }
+        function loadOrders(){
+            const userId = getCurrentUserId();
+            const listEl = document.getElementById('ordersList');
+            const emptyEl = document.getElementById('emptyState');
+            if (!userId){
+                listEl.innerHTML = '';
+                emptyEl.style.display = 'block';
+                emptyEl.textContent = 'Vui lòng đăng nhập để xem đơn hàng của bạn.';
+                return;
+            }
+            let orders = [];
+            try{orders = JSON.parse(localStorage.getItem('adminOrders')||'[]')}catch(e){orders=[]}
+            const mine = orders.filter(o => o.userId === userId);
+
+            const q = document.getElementById('searchInput').value.trim().toLowerCase();
+            const st = document.getElementById('statusFilter').value;
+            const filtered = mine.filter(o => {
+                const matchId = !q || (o.id||'').toLowerCase().includes(q);
+                const matchSt = st==='all' || normalizeStatus(o.status).code===st;
+                return matchId && matchSt;
+            });
+
+            listEl.innerHTML = '';
+            if (filtered.length===0){
+                emptyEl.style.display = 'block';
+                emptyEl.textContent = 'Chưa có đơn hàng nào.';
+                return;
+            }
+            emptyEl.style.display = 'none';
+
+            filtered.sort((a,b)=> new Date(b.date)-new Date(a.date));
+            filtered.forEach(o=>{
+                const s = normalizeStatus(o.status);
+                const itemsCount = Array.isArray(o.items)?o.items.reduce((n,it)=>n+(it.quantity||1),0):0;
+                const card = document.createElement('div');
+                card.className = 'order-card';
+                card.innerHTML = `
+                    <div class="order-main">
+                        <div><span class="order-id">${o.id}</span></div>
+                        <div class="order-meta">
+                            <span><i class="fas fa-calendar"></i> ${new Date(o.date).toLocaleString('vi-VN')}</span>
+                            <span><i class="fas fa-box"></i> ${itemsCount} sản phẩm</span>
+                            <span><i class="fas fa-coins"></i> ${formatPrice(o.total||0)}</span>
+                        </div>
+                        <div class="order-items">${(o.items||[]).map(it=>`${it.name} x${it.quantity||1}`).join(' • ')}</div>
+                    </div>
+                    <div class="order-actions">
+                        <span class="order-status ${s.cls}"><i class="fas fa-circle"></i> ${s.text}</span>
+                        <button class="btn-primary" onclick="viewDetails('${o.id}')"><i class="fas fa-eye"></i> Chi tiết</button>
+                    </div>
+                `;
+                document.getElementById('ordersList').appendChild(card);
+            });
+        }
+        function viewDetails(orderId){
+            const orders = JSON.parse(localStorage.getItem('adminOrders')||'[]');
+            const o = orders.find(x=>x.id===orderId);
+            if(!o) return;
+            alert(`Mã đơn: ${o.id}\nNgày: ${new Date(o.date).toLocaleString('vi-VN')}\nTrạng thái: ${(statusMap[o.status]||statusMap.processing).text}\nTổng tiền: ${formatPrice(o.total||0)}`);
+        }
+        document.addEventListener('DOMContentLoaded', ()=>{
+            document.getElementById('searchInput').addEventListener('input', loadOrders);
+            document.getElementById('statusFilter').addEventListener('change', loadOrders);
+            window.addEventListener('storage', (e)=>{ if(e.key==='adminOrders') loadOrders() });
+            let lastSnap = null;
+            setInterval(()=>{
+                const cur = localStorage.getItem('adminOrders');
+                if(cur !== lastSnap){
+                    lastSnap = cur;
+                    loadOrders();
+                }
+            }, 2000);
+            loadOrders();
+        });
+    </script>
+</body>
+</html>
