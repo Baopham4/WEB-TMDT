@@ -1359,6 +1359,12 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('📦 Using default products from sharedata.js');
         }
     }
+
+    try{
+        if(window.productsData && window.productsData.length){
+            localStorage.setItem('websiteProducts', JSON.stringify(window.productsData));
+        }
+    }catch(e){}
     
     console.log('📊 All products:', window.productsData);
     
