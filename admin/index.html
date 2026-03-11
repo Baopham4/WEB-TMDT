@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="admin-style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="../auth.js"></script>
     <script>document.addEventListener('DOMContentLoaded',function(){if(window.Auth&&Auth.enforceAdmin)Auth.enforceAdmin()})</script>
 </head>
@@ -661,69 +663,385 @@
                 document.getElementById('historyPanel').innerHTML = header + (list.length?rows:'');
             }
             function renderDashboard(){
-                const m=(window.CustomerDB&&CustomerDB.getMetrics?CustomerDB.getMetrics():{totalCustomers:0,totalRevenue:0,byDay:{},topCustomers:[]});
-                const orders=JSON.parse(localStorage.getItem('adminOrders')||'[]');
-                const totalOrders=orders.length;
-                const todayStr=new Date().toISOString().slice(0,10);
-                const todayRevenue=(m.byDay && m.byDay[todayStr])?m.byDay[todayStr]:0;
-
-                const byDayEntries=Object.entries(m.byDay||{}).sort((a,b)=>a[0].localeCompare(b[0]));
-                const lastDays=byDayEntries.slice(-7);
-                const max=Math.max(1,...lastDays.map(x=>x[1]));
-                const chartRows=lastDays.map(([d,val])=>`<div class="chart-row">
-                    <div>${d}</div>
-                    <div><div class="chart-bar" style="width:${Math.round((val/max)*100)}%"></div></div>
-                    <div style="text-align:right">${(val||0).toLocaleString('vi-VN')} VNĐ</div>
-                </div>`).join('');
-
+                const panel=document.getElementById('dashboardPanel');
+                if(!panel)return;
+                const allOrders=JSON.parse(localStorage.getItem('adminOrders')||'[]');
                 const customers=(window.CustomerDB&&CustomerDB.listCustomers?CustomerDB.listCustomers():[]);
-                const topCustomers=[...customers].sort((a,b)=>(b.totalSpent||0)-(a.totalSpent||0)).slice(0,5);
-                const topRows=topCustomers.map(c=>`<div class="top-list-row">
-                    <div>${c.name||'(Chưa đặt tên)'}</div>
-                    <div style="text-align:right">${(c.totalSpent||0).toLocaleString('vi-VN')} VNĐ</div>
-                </div>`).join('');
-
-                document.getElementById('dashboardPanel').innerHTML=`
-                    <div class="dashboard-grid">
+                const productList=JSON.parse(localStorage.getItem('adminProducts')||localStorage.getItem('websiteProducts')||'[]');
+                const productById={};
+                productList.forEach(p=>{if(p&&p.id!=null)productById[p.id]=p});
+                let revenueChart,ordersChart,categoryChart,topProductsChart,customerTypeChart,statusChart,ordersByCategoryChart;
+                panel.innerHTML=`
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <div style="font-weight:600;font-size:16px">Tổng quan KPI</div>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <select id="dashRange" style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.4);background:#020617;color:#e5e7eb;font-size:13px">
+                                <option value="7">7 ngày</option>
+                                <option value="30" selected>30 ngày</option>
+                                <option value="90">90 ngày</option>
+                                <option value="365">1 năm</option>
+                                <option value="all">Tất cả</option>
+                            </select>
+                            <button id="dashExport" class="btn-secondary"><i class="fas fa-file-excel"></i> Export Orders</button>
+                        </div>
+                    </div>
+                    <div class="dashboard-grid" style="margin-bottom:24px">
                         <div class="dashboard-metric">
                             <div>
                                 <div class="dashboard-metric-label">Tổng đơn hàng</div>
-                                <div class="dashboard-metric-value">${totalOrders}</div>
+                                <div class="dashboard-metric-value" id="kpiTotalOrders">0</div>
                             </div>
                             <div class="dashboard-metric-sub">Từ trước đến nay</div>
                         </div>
                         <div class="dashboard-metric">
                             <div>
                                 <div class="dashboard-metric-label">Tổng khách hàng</div>
-                                <div class="dashboard-metric-value">${m.totalCustomers||0}</div>
+                                <div class="dashboard-metric-value" id="kpiTotalCustomers">0</div>
                             </div>
-                            <div class="dashboard-metric-sub">Khách đã có hồ sơ</div>
+                            <div class="dashboard-metric-sub">Đã có hồ sơ</div>
                         </div>
                         <div class="dashboard-metric">
                             <div>
-                                <div class="dashboard-metric-label">Doanh thu</div>
-                                <div class="dashboard-metric-value">${(m.totalRevenue||0).toLocaleString('vi-VN')} VNĐ</div>
+                                <div class="dashboard-metric-label">Tổng doanh thu</div>
+                                <div class="dashboard-metric-value" id="kpiTotalRevenue">0</div>
                             </div>
-                            <div class="dashboard-metric-sub">Tổng cộng</div>
+                            <div class="dashboard-metric-sub">VNĐ</div>
                         </div>
                         <div class="dashboard-metric">
                             <div>
-                                <div class="dashboard-metric-label">Doanh thu hôm nay</div>
-                                <div class="dashboard-metric-value">${todayRevenue.toLocaleString('vi-VN')} VNĐ</div>
+                                <div class="dashboard-metric-label">AOV</div>
+                                <div class="dashboard-metric-value" id="kpiAOV">0</div>
                             </div>
-                            <div class="dashboard-metric-sub">${todayStr}</div>
+                            <div class="dashboard-metric-sub">Giá trị trung bình đơn</div>
+                        </div>
+                        <div class="dashboard-metric">
+                            <div>
+                                <div class="dashboard-metric-label">NMV</div>
+                                <div class="dashboard-metric-value" id="kpiNMV">0</div>
+                            </div>
+                            <div class="dashboard-metric-sub">Sau hủy/trả</div>
+                        </div>
+                        <div class="dashboard-metric">
+                            <div>
+                                <div class="dashboard-metric-label">Conversion</div>
+                                <div class="dashboard-metric-value" id="kpiConversion">0%</div>
+                            </div>
+                            <div class="dashboard-metric-sub">Đơn/Sessions</div>
+                        </div>
+                    </div>
+                    <div class="dashboard-row" style="margin-bottom:20px">
+                        <div class="dashboard-card">
+                            <h3>Trạng thái đơn hàng</h3>
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="dashboard-row" style="margin-bottom:20px">
+                        <div class="dashboard-card">
+                            <h3>Doanh thu theo ngày</h3>
+                            <canvas id="revChart"></canvas>
+                        </div>
+                        <div class="dashboard-card">
+                            <h3>Đơn hàng theo ngày</h3>
+                            <canvas id="ordersChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="dashboard-row" style="margin-bottom:20px">
+                        <div class="dashboard-card">
+                            <h3>Doanh thu theo danh mục</h3>
+                            <div style="height:400px">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                            <h3 style="margin-top:16px;font-size:14px">Số đơn theo danh mục</h3>
+                            <canvas id="ordersByCatChart"></canvas>
+                        </div>
+                        <div class="dashboard-card">
+                            <h3>Khách mới vs quay lại</h3>
+                            <div style="height:400px">
+                                <canvas id="customerTypeChart"></canvas>
+                            </div>
                         </div>
                     </div>
                     <div class="dashboard-row">
                         <div class="dashboard-card">
-                            <h3>Doanh thu 7 ngày gần nhất</h3>
-                            <div>${chartRows || 'Không có dữ liệu'}</div>
+                            <h3>Đơn hàng gần nhất</h3>
+                            <table class="admin-table">
+                                <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th><th>Ngày</th></tr></thead>
+                                <tbody id="recentOrdersBody"></tbody>
+                            </table>
                         </div>
                         <div class="dashboard-card">
                             <h3>Top khách hàng</h3>
-                            <div>${topRows || 'Chưa có khách'}</div>
+                            <table class="admin-table">
+                                <thead><tr><th>Khách hàng</th><th>Số đơn</th><th>Tổng chi tiêu</th></tr></thead>
+                                <tbody id="topCustomersBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="dashboard-card" style="margin-top:20px">
+                        <h3>Top sản phẩm</h3>
+                        <div style="display:flex;flex-direction:column;gap:16px">
+                            <div style="min-height:260px">
+                                <canvas id="topProductsChart"></canvas>
+                            </div>
+                            <div style="max-height:220px;overflow:auto;border-top:1px solid rgba(148,163,184,.3);padding-top:8px">
+                                <table class="admin-table">
+                                    <thead><tr><th>Sản phẩm</th><th>Số lượng</th><th>Doanh thu</th></tr></thead>
+                                    <tbody id="topProductsBody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>`;
+
+                function getRangeDays(val){
+                    if(val==='all')return null;
+                    const n=parseInt(val,10);
+                    if(!n||n<=0)return null;
+                    return n;
+                }
+
+                function buildData(rangeVal){
+                    const days=getRangeDays(rangeVal);
+                    const now=new Date();
+                    const from=days?new Date(now.getTime()-days*86400000):null;
+                    const orders=allOrders.filter(o=>{
+                        const d=new Date(o.date||o.createdAt||o.created_at);
+                        if(isNaN(d.getTime()))return false;
+                        if(from&&d<from)return false;
+                        if(d>now)return false;
+                        return true;
+                    });
+                    const totalOrders=orders.length;
+                    let totalRevenue=0;
+                    let netRevenue=0;
+                    let totalProductsSold=0;
+                    const byDay={};
+                    const ordersByDay={};
+                    const catRevenue={};
+                    const ordersByCat={};
+                    const prodMap={};
+                    const statusSummary={confirmed:0,canceled:0,returned:0};
+                    const fmtDay=d=>d.toISOString().slice(0,10);
+                    orders.forEach(o=>{
+                        const d=new Date(o.date||o.createdAt||o.created_at);
+                        const keyDay=fmtDay(d);
+                        const val=Number(o.total)||0;
+                        totalRevenue+=val;
+                        const st=o.status||'';
+                        if(st==='Đã hủy')statusSummary.canceled++;
+                        else if(st==='Trả hàng'||st==='Đã trả')statusSummary.returned++;
+                        else statusSummary.confirmed++;
+                        if(st!=='Đã hủy'&&st!=='Trả hàng'&&st!=='Đã trả')netRevenue+=val;
+                        byDay[keyDay]=(byDay[keyDay]||0)+val;
+                        ordersByDay[keyDay]=(ordersByDay[keyDay]||0)+1;
+                        const items=Array.isArray(o.items)?o.items:[];
+                        const catsForOrder=new Set();
+                        items.forEach(it=>{
+                            const qty=Number(it.quantity)||0;
+                            const price=Number(it.price)||0;
+                            totalProductsSold+=qty;
+                            const pid=it.id||it.productId||it.name;
+                            if(!pid)return;
+                            const prod=productById[pid]||{};
+                            const name=it.name||prod.name||('SP '+pid);
+                            if(!prodMap[pid])prodMap[pid]={name,quantity:0,revenue:0};
+                            prodMap[pid].quantity+=qty;
+                            prodMap[pid].revenue+=qty*price;
+                            const cat=it.category||prod.category||'Khác';
+                            catRevenue[cat]=(catRevenue[cat]||0)+qty*price;
+                            catsForOrder.add(cat);
+                        });
+                        catsForOrder.forEach(cn=>{
+                            ordersByCat[cn]=(ordersByCat[cn]||0)+1;
+                        });
+                    });
+                    const kpiTotalCustomers=customers.length;
+                    const aov=totalOrders?Math.round(totalRevenue/totalOrders):0;
+                    let newCust=0,retCust=0;
+                    customers.forEach(c=>{
+                        const oc=c.orderCount||0;
+                        if(oc<=1)newCust++;else retCust++;
+                    });
+                    return{orders,totalOrders,totalRevenue,netRevenue,totalProductsSold,kpiTotalCustomers,aov,byDay,ordersByDay,catRevenue,ordersByCat,prodMap,newCust,retCust,statusSummary};
+                }
+
+                let currentRange=document.getElementById('dashRange').value;
+                let currentOrders=[];
+
+                function render(rangeVal){
+                    const data=buildData(rangeVal);
+                    currentOrders=data.orders;
+                    const sessions=Number(localStorage.getItem('traffic_sessions')||0);
+                    const views=Number(localStorage.getItem('traffic_productViews')||0);
+                    const convRate=sessions?(data.totalOrders/sessions*100):0;
+                    document.getElementById('kpiTotalOrders').textContent=data.totalOrders;
+                    document.getElementById('kpiTotalCustomers').textContent=data.kpiTotalCustomers;
+                    document.getElementById('kpiTotalRevenue').textContent=(data.totalRevenue||0).toLocaleString('vi-VN')+' VNĐ';
+                    document.getElementById('kpiAOV').textContent=(data.aov||0).toLocaleString('vi-VN')+' VNĐ';
+                    const nmvEl=document.getElementById('kpiNMV');
+                    if(nmvEl)nmvEl.textContent=(data.netRevenue||0).toLocaleString('vi-VN')+' VNĐ';
+                    const convEl=document.getElementById('kpiConversion');
+                    if(convEl)convEl.textContent=(convRate||0).toFixed(1)+'%';
+                    const labels=Object.keys(data.byDay).sort();
+                    const revVals=labels.map(k=>data.byDay[k]);
+                    const ordVals=labels.map(k=>data.ordersByDay[k]||0);
+                    if(revenueChart)revenueChart.destroy();
+                    if(ordersChart)ordersChart.destroy();
+                    const ctxRev=document.getElementById('revChart').getContext('2d');
+                    const ctxOrd=document.getElementById('ordersChart').getContext('2d');
+                    revenueChart=new Chart(ctxRev,{type:'line',data:{labels,datasets:[{label:'Doanh thu',data:revVals,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.18)',fill:true,tension:0.35}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+                    ordersChart=new Chart(ctxOrd,{type:'bar',data:{labels,datasets:[{label:'Đơn hàng',data:ordVals,backgroundColor:'rgba(59,130,246,0.8)'}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+                    const catLabels=Object.keys(data.catRevenue);
+                    const catVals=catLabels.map(k=>data.catRevenue[k]);
+                    if(categoryChart)categoryChart.destroy();
+                    if(catLabels.length){
+                        const ctxCat=document.getElementById('categoryChart').getContext('2d');
+                        categoryChart=new Chart(ctxCat,{
+                            type:'doughnut',
+                            data:{labels:catLabels,datasets:[{data:catVals,backgroundColor:['#22c55e','#3b82f6','#f97316','#eab308','#ec4899','#8b5cf6']}]},
+                            options:{
+                                plugins:{
+                                    legend:{position:'bottom'},
+                                    tooltip:{
+                                        callbacks:{
+                                            label:function(context){
+                                                const dataArr=context.chart.data.datasets[0].data;
+                                                const total=dataArr.reduce((s,v)=>s+v,0);
+                                                const val=context.parsed||0;
+                                                const pct=total?((val/total)*100).toFixed(1):0;
+                                                return`${context.label}: ${val.toLocaleString('vi-VN')} (${pct}%)`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    const ordCatLabels=Object.keys(data.ordersByCat);
+                    const ordCatVals=ordCatLabels.map(k=>data.ordersByCat[k]);
+                    if(ordersByCategoryChart)ordersByCategoryChart.destroy();
+                    if(ordCatLabels.length){
+                        const ctxOC=document.getElementById('ordersByCatChart').getContext('2d');
+                        ordersByCategoryChart=new Chart(ctxOC,{
+                            type:'bar',
+                            data:{labels:ordCatLabels,datasets:[{label:'Số đơn',data:ordCatVals,backgroundColor:'rgba(59,130,246,0.8)'}]},
+                            options:{
+                                indexAxis:'y',
+                                scales:{x:{beginAtZero:true}},
+                                plugins:{
+                                    legend:{display:false},
+                                    tooltip:{
+                                        callbacks:{
+                                            label:function(context){
+                                                const dataArr=context.chart.data.datasets[0].data;
+                                                const total=dataArr.reduce((s,v)=>s+v,0);
+                                                const val=context.parsed||0;
+                                                const pct=total?((val/total)*100).toFixed(1):0;
+                                                return`${context.label}: ${val} đơn (${pct}%)`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    if(customerTypeChart)customerTypeChart.destroy();
+                    const ctxType=document.getElementById('customerTypeChart').getContext('2d');
+                    customerTypeChart=new Chart(ctxType,{
+                        type:'pie',
+                        data:{labels:['Khách mới','Khách quay lại'],datasets:[{data:[data.newCust,data.retCust],backgroundColor:['#22c55e','#6366f1']}]},
+                        options:{
+                            plugins:{
+                                legend:{position:'bottom'},
+                                tooltip:{
+                                    callbacks:{
+                                        label:function(context){
+                                            const dataArr=context.chart.data.datasets[0].data;
+                                            const total=dataArr.reduce((s,v)=>s+v,0);
+                                            const val=context.parsed||0;
+                                            const pct=total?((val/total)*100).toFixed(1):0;
+                                            return`${context.label}: ${val} (${pct}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    if(statusChart)statusChart.destroy();
+                    const ctxStatus=document.getElementById('statusChart');
+                    if(ctxStatus){
+                        const sData=data.statusSummary;
+                        const labelsStatus=['Confirmed','Canceled','Returned'];
+                        const valsStatus=[sData.confirmed||0,sData.canceled||0,sData.returned||0];
+                        statusChart=new Chart(ctxStatus.getContext('2d'),{
+                            type:'bar',
+                            data:{labels:labelsStatus,datasets:[{label:'Số đơn',data:valsStatus,backgroundColor:['#22c55e','#ef4444','#f97316']}]},
+                            options:{
+                                indexAxis:'y',
+                                scales:{x:{beginAtZero:true}},
+                                plugins:{
+                                    legend:{display:false},
+                                    tooltip:{
+                                        callbacks:{
+                                            label:function(context){
+                                                const dataArr=context.chart.data.datasets[0].data;
+                                                const total=dataArr.reduce((s,v)=>s+v,0);
+                                                const val=context.parsed||0;
+                                                const pct=total?((val/total)*100).toFixed(1):0;
+                                                return`${context.label}: ${val} (${pct}%)`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    const prodList=Object.values(data.prodMap).sort((a,b)=>b.quantity-a.quantity).slice(0,10);
+                    const prodLabels=prodList.map(p=>p.name);
+                    const prodQty=prodList.map(p=>p.quantity);
+                    if(topProductsChart)topProductsChart.destroy();
+                    if(prodList.length){
+                        const ctxProd=document.getElementById('topProductsChart').getContext('2d');
+                        topProductsChart=new Chart(ctxProd,{type:'bar',data:{labels:prodLabels,datasets:[{label:'Số lượng',data:prodQty,backgroundColor:'#f97316'}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}}}});
+                    }
+                    const tbodyRecent=document.getElementById('recentOrdersBody');
+                    const fmtMoney=v=>(Number(v)||0).toLocaleString('vi-VN')+' VNĐ';
+                    const sortedOrders=[...data.orders].sort((a,b)=>new Date(b.date||b.createdAt||b.created_at)-new Date(a.date||a.createdAt||a.created_at)).slice(0,20);
+                    tbodyRecent.innerHTML=sortedOrders.map(o=>{
+                        const d=new Date(o.date||o.createdAt||o.created_at);
+                        const name=o.customer&&o.customer.name?o.customer.name:'Khách lẻ';
+                        return`<tr><td>${o.id||o.order_id||''}</td><td>${name}</td><td>${fmtMoney(o.total)}</td><td>${o.status||''}</td><td>${d.toLocaleString('vi-VN')}</td></tr>`;
+                    }).join('');
+                    const tbodyCust=document.getElementById('topCustomersBody');
+                    const topCust=[...customers].sort((a,b)=>(b.totalSpent||0)-(a.totalSpent||0)).slice(0,10);
+                    tbodyCust.innerHTML=topCust.map(c=>`<tr><td>${c.name||'(Chưa đặt tên)'}</td><td>${c.orderCount||0}</td><td>${fmtMoney(c.totalSpent||0)}</td></tr>`).join('');
+                    const tbodyProd=document.getElementById('topProductsBody');
+                    tbodyProd.innerHTML=prodList.map(p=>`<tr><td>${p.name}</td><td>${p.quantity}</td><td>${fmtMoney(p.revenue)}</td></tr>`).join('');
+                }
+
+                document.getElementById('dashRange').addEventListener('change',function(){
+                    currentRange=this.value;
+                    render(currentRange);
+                });
+
+                document.getElementById('dashExport').addEventListener('click',function(){
+                    if(!window.XLSX||!currentOrders.length)return;
+                    const data=currentOrders.map(o=>{
+                        const d=new Date(o.date||o.createdAt||o.created_at);
+                        return{
+                            order_id:o.id||o.order_id||'',
+                            customer:(o.customer&&o.customer.name)?o.customer.name:'Khách lẻ',
+                            total:o.total||0,
+                            status:o.status||'',
+                            date:d.toISOString()
+                        };
+                    });
+                    const ws=XLSX.utils.json_to_sheet(data);
+                    const wb=XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb,ws,'Orders');
+                    XLSX.writeFile(wb,'orders_report.xlsx');
+                });
+
+                render(currentRange);
             }
             function renderCampaigns(){const promos=(window.CustomerDB&&CustomerDB.getPromotions?CustomerDB.getPromotions():[]);document.getElementById('campaignsPanel').innerHTML=promos.map(p=>`<div style="padding:8px;border:1px solid rgba(0,0,0,.05);border-radius:8px;margin-bottom:8px"><div><strong>${p.title}</strong></div><div>${p.desc}</div><div>Mã: <strong>${p.code}</strong></div></div>`).join('')}
         })

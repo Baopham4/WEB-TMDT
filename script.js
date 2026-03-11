@@ -65,6 +65,24 @@ const Core = {
         cartCounts.forEach(count => {
             count.textContent = currentCart.length;
         });
+    },
+
+    trackSession() {
+        try{
+            if(typeof sessionStorage!=='undefined'&&sessionStorage.getItem('session_tracked'))return;
+            if(typeof sessionStorage!=='undefined')sessionStorage.setItem('session_tracked','1');
+            const key='traffic_sessions';
+            const current=Number(localStorage.getItem(key)||0);
+            localStorage.setItem(key,String(current+1));
+        }catch(e){}
+    },
+
+    trackProductView() {
+        try{
+            const key='traffic_productViews';
+            const current=Number(localStorage.getItem(key)||0);
+            localStorage.setItem(key,String(current+1));
+        }catch(e){}
     }
 };
 
@@ -289,6 +307,7 @@ const HomePage = {
     },
 
     showProductModal(productId) {
+        if(window.Core&&Core.trackProductView)Core.trackProductView();
         const product = window.productsData.find(p => p.id === productId);
         if (!product) return;
         
@@ -1328,6 +1347,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Cập nhật số lượng giỏ hàng
     Core.updateCartCount();
+    if(Core.trackSession)Core.trackSession();
     
     // Kiểm tra và đồng bộ dữ liệu sản phẩm
     if (!window.productsData || window.productsData.length === 0) {
