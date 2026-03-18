@@ -910,6 +910,60 @@ img {
     gap: 10px;
 }
 
+.contact-info p a {
+    color: var(--jade-dark);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.contact-info p a:hover {
+    color: var(--gold);
+    text-decoration: underline;
+}
+
+.contact-buttons {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.btn-contact {
+    padding: 15px 25px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-contact.zalo {
+    background-color: #0068ff;
+    color: white;
+}
+
+.btn-contact.zalo:hover {
+    background-color: #005ae0;
+    transform: translateY(-3px);
+}
+
+.btn-contact.messenger {
+    background-color: #0084ff;
+    color: white;
+}
+
+.btn-contact.messenger:hover {
+    background-color: #0073e0;
+    transform: translateY(-3px);
+}
+
 .contact-form {
     background: white;
     padding: 40px;
@@ -1831,14 +1885,16 @@ img {
 .product-modal .modal-description {
     font-size: 14px;
     line-height: 1.6;
-    color: #cbd5e1;
+    color: #f9fafb;
+    font-weight: 500;
     margin-bottom: 12px;
 }
 
 .product-modal .modal-details p {
     margin: 2px 0;
     font-size: 14px;
-    color: #e5e7eb;
+    color: #f1f5f9;
+    font-weight: 500;
 }
 
 .product-modal .modal-price {
