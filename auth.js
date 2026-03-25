@@ -100,7 +100,24 @@
             nav.appendChild(wrapper);
         });
     }
+    async function seedDefaultAccounts(){
+        const defaults=[
+            {name:'Admin',email:'admin@gmail.com',password:'123456',role:'admin'},
+            {name:'Khách lẻ 01',email:'khachle01@gmail.com',password:'123456',role:'user'},
+            {name:'Khách lẻ 02',email:'khachle02@gmail.com',password:'123456',role:'user'},
+            {name:'Khách lẻ 03',email:'khachle03@gmail.com',password:'123456',role:'user'},
+            {name:'Khách lẻ 04',email:'khachle04@gmail.com',password:'123456',role:'user'}
+        ];
+        for(const acc of defaults){
+            try{
+                await register(acc);
+            }catch(e){
+                console.error('Không thể tạo tài khoản mặc định',acc.email,e);
+            }
+        }
+    }
     function enforceAdmin(){const u=current();if(!u||u.role!=='admin'){window.location.href='../auth.html?mode=admin'}}
     window.Auth={register,login,logout,current,ensureNav,enforceAdmin}
+    seedDefaultAccounts();
     ensureNav()
 })(); 
