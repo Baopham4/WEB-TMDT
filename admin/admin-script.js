@@ -51,6 +51,43 @@ class AdminManager {
     }
 
     getDefaultProducts() {
+        const pretty = (file) => {
+            let base = file.replace(/\.[^/.]+$/g, "");
+            base = base.replace(/[-_]+/g, " ");
+            base = base.replace(/([a-z])([A-Z])/g, "$1 $2");
+            base = base.replace(/\s+/g, " ").trim();
+            const title = base.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+            const repl = [
+                [/Vong/gi, "Vòng"],
+                [/Day Chuyen/gi, "Dây Chuyền"],
+                [/Nhan/gi, "Nhẫn"],
+                [/Bong Tai/gi, "Bông Tai"],
+                [/Mat Ngoc/gi, "Mặt Ngọc"],
+                [/Phi Thuy/gi, "Phỉ Thúy"],
+                [/Bang Chung/gi, "Băng Chủng"],
+                [/Bach Ngoc/gi, "Bạch Ngọc"],
+                [/Hoang Ngoc/gi, "Hoàng Ngọc"],
+                [/Cam Anh/gi, "Cam Ánh"],
+                [/Hoang Hon/gi, "Hoàng Hôn"],
+                [/Tim Oai Huong/gi, "Tím Oải Hương"],
+                [/Xam Khoi/gi, "Xám Khói"],
+                [/Tam Sac/gi, "Tam Sắc"],
+                [/Da Sac/gi, "Đa Sắc"],
+                [/Trang Pha Luc/gi, "Trắng Pha Lục"],
+                [/Xanh Tao/gi, "Xanh Táo"],
+                [/Van May/gi, "Vân Mây"],
+                [/Dong Dieu/gi, "Đồng Điếu"],
+                [/Phat Di Lac/gi, "Phật Di Lặc"],
+                [/Quan Am/gi, "Quan Âm"],
+                [/Ty Huu/gi, "Tỳ Hưu"],
+                [/Giot Nuoc/gi, "Giọt Nước"],
+                [/Hoa Mau Don Phu Quy/gi, "Hoa Mẫu Đơn Phú Quý"],
+                [/Luc Bao/gi, "Lục Bảo"]
+            ];
+            let pretty = title;
+            repl.forEach(([r, v]) => pretty = pretty.replace(r, v));
+            return pretty;
+        };
         const files = [
             "VongPhiThuyBangChungTrongSuot.jpeg",
             "VongPhiThuyBachNgocTinhKhoi.jpeg",
@@ -173,7 +210,7 @@ class AdminManager {
         ];
 
         return files.map((file, index) => {
-            const name = file.replace(/\.[^/.]+$/g, "");
+            const name = pretty(file);
             const lower = name.toLowerCase();
             let category = "Khác";
             if (lower.startsWith("vòng") || lower.startsWith("vong") || lower.includes("vongphithuy") || lower.startsWith("vongtay")) category = "Vòng tay";
