@@ -2,7 +2,7 @@
 // JAVASCRIPT CHUNG CHO CẢ 2 TRANG
 // =========================================== //
 
-import { studentInfo, productsData, newsData } from './sharedata.js';
+import { studentInfo, productsData, newsData } from './sharedata.js?v=20260328';
 
 // ⭐ CẬP NHẬT: TẠO WINDOW.PRODUCTSDATA ĐỂ CÓ THỂ CẬP NHẬT TỪ ADMIN
 window.productsData = [...productsData];
@@ -1349,22 +1349,31 @@ document.addEventListener('DOMContentLoaded', function() {
     Core.updateCartCount();
     if(Core.trackSession)Core.trackSession();
     
-    // Kiểm tra và đồng bộ dữ liệu sản phẩm
-    if (!window.productsData || window.productsData.length === 0) {
-        const savedProducts = localStorage.getItem('adminProducts');
-        if (savedProducts) {
-            window.productsData = JSON.parse(savedProducts);
-            console.log('📦 Loaded products from localStorage:', window.productsData.length);
-        } else {
-            console.log('📦 Using default products from sharedata.js');
-        }
-    }
+    // Kiểm tra và đồng bộ dữ liệu sản phẩm (ưu tiên đầy đủ dữ liệu nhất)
+    try {
+        const PRODUCTS_VERSION = 'v2-images-synced-2026-03-27';
+        const storedVersion = localStorage.getItem('productsVersion');
 
-    try{
-        if(window.productsData && window.productsData.length){
-            localStorage.setItem('websiteProducts', JSON.stringify(window.productsData));
+        const base = Array.isArray(window.productsData) ? window.productsData : [];
+        const storedAdmin = JSON.parse(localStorage.getItem('adminProducts') || '[]');
+        const storedWebsite = JSON.parse(localStorage.getItem('websiteProducts') || '[]');
+
+        // Chọn danh sách có số lượng lớn nhất để tránh thiếu sản phẩm
+        const candidates = [base, storedAdmin, storedWebsite].filter(Array.isArray);
+        let best = candidates.reduce((a, b) => (b.length > a.length ? b : a), []);
+
+        // Nếu version thay đổi hoặc dữ liệu tốt nhất ít hơn dữ liệu mặc định → dùng mặc định
+        if (storedVersion !== PRODUCTS_VERSION || best.length < base.length) {
+            best = base;
+            localStorage.setItem('productsVersion', PRODUCTS_VERSION);
         }
-    }catch(e){}
+
+        window.productsData = best;
+        localStorage.setItem('websiteProducts', JSON.stringify(window.productsData));
+        console.log('📦 Products in use:', window.productsData.length, 'items');
+    } catch (e) {
+        console.warn('Không thể đồng bộ dữ liệu sản phẩm:', e);
+    }
     
     console.log('📊 All products:', window.productsData);
     
