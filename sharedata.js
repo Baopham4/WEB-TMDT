@@ -179,7 +179,7 @@ let productsData = productImageFiles.map((file, index) => {
     else if (lower.startsWith("dây chuyền") || lower.startsWith("daychuyen") || lower.includes("daychuyenphithuy")) category = "Dây chuyền";
     else if (lower.startsWith("nhẫn") || lower.startsWith("nhan") || lower.includes("nhanphithuy")) category = "Nhẫn";
     else if (lower.startsWith("bông tai") || lower.startsWith("bongtai") || lower.includes("bongtaiphithuy")) category = "Bông tai";
-    else if (lower.startsWith("mặt ngọc") || lower.includes("matngoc") || lower.includes("matngocphithuy")) category = "Mặt dây chuyền";
+    else if (lower.startsWith("mặt ngọc") || lower.includes("matngoc") || lower.includes("matngocphithuy")) category = "Mặt ngọc";
 
     const basePrice = 42000000 + index * 500000;
 
@@ -254,7 +254,7 @@ function getDefaultImage(category) {
         "Dây chuyền": "images/daychuyen1.jpg",
         "Nhẫn": "images/nhan1.jpg",
         "Bông tai": "images/bongtai1.jpg",
-        "Mặt dây chuyền": "images/daychuyen1.jpg",
+        "Mặt ngọc": "images/daychuyen1.jpg",
         "Khác": "images/default-product.jpg"
     };
     return categoryMap[category] || "images/default-product.jpg";
