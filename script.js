@@ -310,9 +310,11 @@ const HomePage = {
         if(window.Core&&Core.trackProductView)Core.trackProductView();
         const product = window.productsData.find(p => p.id === productId);
         if (!product) return;
+        const basePrice = ProductsPage.extractPrice(product.price);
         
         const modal = document.createElement('div');
         modal.className = 'product-modal active';
+        modal.dataset.basePrice = String(basePrice);
         modal.innerHTML = `
             <div class="modal-overlay"></div>
             <div class="modal-content">
@@ -334,9 +336,20 @@ const HomePage = {
                         </div>
                         
                         <div class="modal-price">${product.price}</div>
+                        <div class="option-group">
+                            <p class="option-title">Tùy chọn nâng cấp</p>
+                            <label class="option-item">
+                                <input type="checkbox" class="upgrade-option" data-extra="5000000" data-label="Kết hợp vàng">
+                                Kết hợp vàng
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" class="upgrade-option" data-extra="10000000" data-label="Kết hợp kim cương">
+                                Kết hợp kim cương
+                            </label>
+                        </div>
                         
                         <div class="modal-buttons">
-                            <button class="btn-primary" onclick="ProductsPage.addToCartFromButton(${product.id}); this.closest('.product-modal').classList.remove('active');">
+                            <button class="btn-primary" onclick="applyProductOptionsAndAddToCart(${product.id}, this); this.closest('.product-modal').classList.remove('active');">
                                 <i class="fas fa-shopping-cart"></i> THÊM VÀO GIỎ
                             </button>
                             <button class="btn-secondary" onclick="Core.showNotification('Yêu cầu tư vấn đã được gửi!', 'success'); this.closest('.product-modal').classList.remove('active');">
@@ -1594,6 +1607,32 @@ const ZaloChat = {
         });
         addMsg('Xin chào, mình là trợ lý Zalo của PHỈ THÚY CHI BẢO. Bạn cần tư vấn sản phẩm hay đơn hàng?', 'bot');
     }
+};
+
+window.applyProductOptionsAndAddToCart = function(productId, btn){
+    const modal = btn.closest('.product-modal');
+    const base = parseInt(modal?.dataset?.basePrice || '0', 10);
+    let extra = 0;
+    const selectedLabels = [];
+    modal.querySelectorAll('.upgrade-option:checked').forEach(cb=>{
+        extra += parseInt(cb.getAttribute('data-extra')||'0',10);
+        const lbl = cb.getAttribute('data-label');
+        if (lbl) selectedLabels.push(lbl);
+    });
+    const product = window.productsData.find(p=>p.id==productId);
+    if(!product){ alert('Không tìm thấy sản phẩm'); return; }
+    const finalPrice = base + extra;
+    const formatted = ProductsPage.formatPrice(finalPrice) + ' VNĐ';
+    const productWithOption = {
+        ...product,
+        price: formatted,
+        selectedOptions: selectedLabels
+    };
+    let shoppingCart = JSON.parse(localStorage.getItem('shoppingCart') || '[]');
+    shoppingCart.push({...productWithOption, quantity: 1});
+    localStorage.setItem('shoppingCart', JSON.stringify(shoppingCart));
+    if (typeof Core !== 'undefined' && Core.updateCartCount) Core.updateCartCount();
+    Core.showNotification(`Đã thêm "${product.name}"${selectedLabels.length?` (${selectedLabels.join(', ')})`:''} - ${formatted}`, 'success');
 };
 
 // Thêm nút admin trên header (chỉ hiển thị cho admin)

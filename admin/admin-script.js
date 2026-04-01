@@ -538,6 +538,17 @@ class AdminManager {
             `Mã voucher: ${voucher ? voucher.code : '-'}`,
             `Tổng tiền sau giảm: ${this.formatPrice(o.total)}`
         ];
+        const items = Array.isArray(o.items) ? o.items : [];
+        if (items.length) {
+            lines.push('', 'Sản phẩm:');
+            items.forEach((it, idx) => {
+                const price = this.formatPrice(it.price || 0);
+                const opt = Array.isArray(it.options) && it.options.length
+                    ? ` | Nâng cấp: ${it.options.join(', ')}`
+                    : '';
+                lines.push(`${idx+1}. ${it.name} x${it.quantity || 1} - ${price} VNĐ${opt}`);
+            });
+        }
         alert(lines.join('\n'));
     }
 

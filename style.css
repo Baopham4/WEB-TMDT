@@ -1929,6 +1929,34 @@ img {
     border: 1px solid rgba(148, 163, 184, 0.7);
 }
 
+.option-group {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.option-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #e5e7eb;
+}
+
+.option-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #e5e7eb;
+    margin-bottom: 4px;
+}
+
+.option-item input[type="checkbox"] {
+    accent-color: #facc15;
+}
+
 /* POPUP THÔNG TIN SINH VIÊN */
 .student-popup {
     position: fixed;

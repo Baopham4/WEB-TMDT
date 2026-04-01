@@ -256,6 +256,16 @@
             line-height: 1.6;
         }
 
+        .cart-item-options {
+            font-size: 12px;
+            color: #047857;
+            margin-top: 2px;
+        }
+
+        .cart-item-options i {
+            margin-right: 4px;
+        }
+
         .cart-item-meta {
             display: flex;
             gap: 15px;
@@ -1299,6 +1309,9 @@
                 this.cart.forEach((item, index) => {
                     const price = this.extractPrice(item.price);
                     const total = price * (item.quantity || 1);
+                    const options = Array.isArray(item.selectedOptions) && item.selectedOptions.length
+                        ? `<div class="cart-item-options"><i class="fas fa-plus-circle"></i> Nâng cấp: ${item.selectedOptions.join(', ')}</div>`
+                        : '';
                     
                     cartHTML += `
                         <div class="cart-item" data-index="${index}">
@@ -1310,6 +1323,7 @@
                                 <div class="cart-item-info">
                                     <h3 class="cart-item-title">${item.name}</h3>
                                     <p class="cart-item-desc">${item.description || ''}</p>
+                                    ${options}
                                     <div class="cart-item-meta">
                                         <span><i class="fas fa-gem"></i> ${item.category || 'Phỉ thúy'}</span>
                                         <span><i class="fas fa-map-marker-alt"></i> ${item.origin || 'Myanmar'}</span>
@@ -2257,7 +2271,8 @@
                         name: item.name,
                         category: item.category || item.productCategory || item.cat || null,
                         price: this.extractPrice(item.price),
-                        quantity: item.quantity || 1
+                        quantity: item.quantity || 1,
+                        options: Array.isArray(item.selectedOptions) ? item.selectedOptions : []
                     })),
                     subtotal,
                     membership: {
