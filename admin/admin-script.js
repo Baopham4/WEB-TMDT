@@ -389,13 +389,28 @@ class AdminManager {
             const salePrice = product.salePrice ? this.formatPrice(product.salePrice) : '-';
             const discount = product.salePrice ? 
                 Math.round((1 - product.salePrice / product.price) * 100) : 0;
-            
+            let imageSrc = product.image || '';
+            if (!imageSrc) imageSrc = 'images/vongtay1.jpg';
+            // Chuẩn hóa src hiển thị trong trang admin (đang ở /admin/)
+            // Dữ liệu gốc luôn lưu "images/..." để website chính dùng trực tiếp từ root
+            if (!/^https?:\/\//i.test(imageSrc)) {
+                // Nếu đã là "images/..." thì thêm "../" để đi lên root
+                if (imageSrc.startsWith('images/')) {
+                    imageSrc = '../' + imageSrc;
+                } else if (imageSrc.startsWith('/')) {
+                    imageSrc = '..' + imageSrc;
+                } else {
+                    // Trường hợp lưu sai thành "bongtai3.jpg" thì thêm "../images/"
+                    imageSrc = '../images/' + imageSrc;
+                }
+            }
+
             html += `
                 <tr>
                     <td>${product.id}</td>
                     <td>
-                        <img src="${product.image}" alt="${product.name}" class="product-image"
-                             onerror="this.src='https://via.placeholder.com/60x60/00796B/FFFFFF?text=IMG'">
+                        <img src="${imageSrc}" alt="${product.name}" class="product-image"
+                             onerror="this.onerror=null;this.src='../images/vongtay1.jpg'">
                     </td>
                     <td>
                         <strong>${product.name}</strong>

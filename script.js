@@ -1230,6 +1230,95 @@ const CartPage = {
 };
 
 // ============================ //
+// TRANG TIN TỨC (news.html)
+// ============================ //
+const NewsPage = {
+    init() {
+        if (!document.querySelector('.news-container')) return;
+        this.setupArticleClicks();
+    },
+
+    setupArticleClicks() {
+        const heroLink = document.querySelector('.hero-card .hero-title a');
+        if (heroLink) {
+            heroLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const card = heroLink.closest('.hero-card');
+                this.openFromElement(card);
+            });
+        }
+
+        document.querySelectorAll('.news-card .news-title a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const card = link.closest('.news-card');
+                this.openFromElement(card);
+            });
+        });
+
+        document.querySelectorAll('.trending-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.openFromElement(item);
+            });
+        });
+    },
+
+    openFromElement(el) {
+        if (!el) return;
+        const img = el.querySelector('img');
+        const titleEl = el.querySelector('.news-title a, .news-title, h4, .hero-title a, .hero-title');
+        const excerptEl = el.querySelector('.news-excerpt, .hero-excerpt');
+        const metaEls = el.querySelectorAll('.news-meta span, .hero-meta span');
+
+        const image = img ? img.getAttribute('src') : 'images/tintuc1.png';
+        const title = titleEl ? titleEl.textContent.trim() : 'Bài viết';
+        const excerpt = excerptEl ? excerptEl.textContent.trim() : '';
+        const meta = Array.from(metaEls).map(m => m.textContent.trim()).join(' • ');
+
+        this.openModal({ image, title, excerpt, meta });
+    },
+
+    openModal(article) {
+        const modal = document.createElement('div');
+        modal.className = 'product-modal active news-modal';
+        const bodyText = article.excerpt || 'Bài viết đang được cập nhật nội dung chi tiết.';
+
+        modal.innerHTML = `
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <button class="modal-close"><i class="fas fa-times"></i></button>
+                <div class="modal-body">
+                    <div class="modal-image">
+                        <img src="${article.image}" alt="${article.title}">
+                    </div>
+                    <div class="modal-info">
+                        <h3>${article.title}</h3>
+                        <p class="modal-description">${bodyText}</p>
+                        ${article.meta ? `<div class="modal-details"><p>${article.meta}</p></div>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeBtn = modal.querySelector('.modal-close');
+        const overlay = modal.querySelector('.modal-overlay');
+        const closeModal = () => modal.classList.remove('active');
+
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+        document.addEventListener('keydown', function onKey(e) {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal();
+                document.removeEventListener('keydown', onKey);
+            }
+        });
+    }
+};
+
+// ============================ //
 // BACK TO TOP FUNCTIONALITY
 // ============================ //
 const BackToTop = {
@@ -1259,6 +1348,8 @@ const BackToTop = {
 // ============================ //
 const Popup = {
     init() {
+        // Không hiển thị trên trang tin tức
+        if (document.querySelector('.news-container')) return;
         // Chỉ hiển thị popup lần đầu
         if (!localStorage.getItem('studentPopupShown')) {
             setTimeout(() => {
@@ -1381,6 +1472,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const isHomePage = document.querySelector('.hero-section');
     const isProductsPage = document.querySelector('.products-container');
     const isCartPage = document.querySelector('.checkout-wrapper');
+    const isNewsPage = document.querySelector('.news-container');
     
     if (isHomePage) {
         HomePage.init();
@@ -1390,6 +1482,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isProductsPage) {
         ProductsPage.init();
         console.log('Đã khởi tạo trang sản phẩm');
+    }
+
+    if (isNewsPage) {
+        NewsPage.init();
+        console.log('Đã khởi tạo trang tin tức');
     }
     
     if (isCartPage) {
@@ -1406,28 +1503,98 @@ window.HomePage = HomePage;
 window.ProductsPage = ProductsPage;
 window.CartPage = CartPage;
 
-// ============================ //
-// QUAN TRỌNG: LẮNG NGHE SỰ KIỆN ĐỒNG BỘ TỪ ADMIN
-// ============================ //
-
-// Lắng nghe sự kiện đồng bộ từ admin
 window.addEventListener('productsSynced', function(e) {
     console.log('📦 Nhận sự kiện đồng bộ:', e.detail.count, 'sản phẩm');
-    
-    // Reload các component hiển thị sản phẩm
     if (typeof ProductsPage !== 'undefined' && ProductsPage.loadProducts) {
         ProductsPage.loadProducts();
     }
-    
     if (typeof HomePage !== 'undefined' && HomePage.loadFeaturedProducts) {
         HomePage.loadFeaturedProducts();
     }
-    
-    // Hiển thị thông báo
     if (typeof Core !== 'undefined' && Core.showNotification) {
         Core.showNotification(`Đã cập nhật ${e.detail.count} sản phẩm mới từ admin`, 'success');
     }
 });
+
+const ZaloChat = {
+    init() {
+        if (document.querySelector('.zalo-chat-toggle')) return;
+        const toggle = document.createElement('div');
+        toggle.className = 'zalo-chat-toggle';
+        toggle.innerHTML = '<i class="fas fa-comment-dots"></i><span>Zalo Chat</span>';
+        const win = document.createElement('div');
+        win.className = 'zalo-chat-window';
+        win.innerHTML = `
+            <div class="zalo-chat-header">
+                <div class="zalo-chat-header-info">
+                    <div class="zalo-avatar">Z</div>
+                    <div>
+                        <div class="zalo-chat-header-title">PHỈ THÚY CHI BẢO</div>
+                        <div class="zalo-chat-header-status">Đang hoạt động</div>
+                    </div>
+                </div>
+                <button type="button" data-close="1"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="zalo-chat-body"></div>
+            <div class="zalo-chat-footer">
+                <input type="text" placeholder="Nhập tin nhắn...">
+                <button type="button"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        `;
+        document.body.appendChild(toggle);
+        document.body.appendChild(win);
+        const body = win.querySelector('.zalo-chat-body');
+        const input = win.querySelector('input');
+        const sendBtn = win.querySelector('.zalo-chat-footer button');
+        const closeBtn = win.querySelector('[data-close]');
+        const addMsg = (text, type) => {
+            const msg = document.createElement('div');
+            msg.className = 'zalo-chat-message ' + type;
+            msg.textContent = text;
+            body.appendChild(msg);
+            body.scrollTop = body.scrollHeight;
+        };
+        const reply = (text) => {
+            const t = text.toLowerCase();
+            let answer;
+            if (t.includes('giá') || t.includes('bao nhiêu')) {
+                answer = 'Sản phẩm có nhiều mức giá khác nhau. Bạn bấm vào sản phẩm trên website để xem chi tiết giá nhé.';
+            } else if (t.includes('ship') || t.includes('giao hàng') || t.includes('vận chuyển')) {
+                answer = 'Bên mình giao hàng toàn quốc, đơn trên 5 triệu được miễn phí vận chuyển tiêu chuẩn.';
+            } else if (t.includes('thanh toán') || t.includes('payment') || t.includes('momo')) {
+                answer = 'Bạn có thể thanh toán khi nhận hàng (COD) hoặc chuyển khoản ngân hàng, Momo.';
+            } else if (t.includes('giờ mở cửa') || t.includes('mở cửa') || t.includes('hoạt động')) {
+                answer = 'Showroom dự kiến hoạt động 8:00 - 18:00, từ thứ 2 đến thứ 7.';
+            } else if (t.includes('tư vấn') || t.includes('liên hệ') || t.includes('zalo')) {
+                answer = 'Bạn có thể chat trực tiếp Zalo qua số 0900 123 456 để được tư vấn chi tiết hơn.';
+            } else {
+                answer = 'Cảm ơn bạn đã nhắn tin. Đây là trợ lý tự động, sẽ cố gắng trả lời các câu hỏi cơ bản. Với nhu cầu cụ thể, bạn có thể chat Zalo: 0900 123 456.';
+            }
+            setTimeout(function(){addMsg(answer, 'bot');}, 600);
+        };
+        const send = () => {
+            const text = input.value.trim();
+            if (!text) return;
+            addMsg(text, 'user');
+            input.value = '';
+            reply(text);
+        };
+        toggle.addEventListener('click', function(){
+            win.classList.toggle('active');
+        });
+        closeBtn.addEventListener('click', function(){
+            win.classList.remove('active');
+        });
+        sendBtn.addEventListener('click', send);
+        input.addEventListener('keydown', function(e){
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                send();
+            }
+        });
+        addMsg('Xin chào, mình là trợ lý Zalo của PHỈ THÚY CHI BẢO. Bạn cần tư vấn sản phẩm hay đơn hàng?', 'bot');
+    }
+};
 
 // Thêm nút admin trên header (chỉ hiển thị cho admin)
 function addAdminButton() {
@@ -1475,7 +1642,7 @@ function addAdminButton() {
     }
 }
 
-// Thêm nút admin khi load
 document.addEventListener('DOMContentLoaded', addAdminButton);
+document.addEventListener('DOMContentLoaded', function(){ZaloChat.init();});
 
 console.log('✅ Tất cả modules đã được tải');
