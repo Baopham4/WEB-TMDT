@@ -2388,9 +2388,15 @@ img {
     }
     
     .nav-menu {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 15px;
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .nav-menu.active {
+        display: flex;
     }
     
     .logo {
